@@ -21,6 +21,7 @@ from framework.objects import MeshObject
 from framework.materials import Material
 from pyglm import glm
 import tree
+from terrain import *
 
 def main():
     width, height = 600, 600
@@ -34,11 +35,26 @@ def main():
 
     glrenderer.addLight(PointLight(glm.vec4(10.0, 10.0, 10.0, 1.0), glm.vec4(0.5, 0.5, 0.5, 1.0)))
 
-    floor_shape = Quad(width=100, height=100)
-    floor_mat = Material(fragment_shader="grid.frag")
-    floor_obj = MeshObject(floor_shape, floor_mat)
-    floor_obj.transform = glm.rotate(glm.radians(-90), glm.vec3(1, 0, 0))
-    glrenderer.addObject(floor_obj)
+    #floor_shape = Quad(width=100, height=100)
+    #floor_mat = Material(fragment_shader="grid.frag")
+    #floor_obj = MeshObject(floor_shape, floor_mat)
+    #floor_obj.transform = glm.rotate(glm.radians(-90), glm.vec3(1, 0, 0))
+    #glrenderer.addObject(floor_obj)
+
+    terrain_shape = Terrain(
+        width=100.0,
+        depth=100.0,
+        res_x=200,  # increase for smoother geometry
+        res_z=200,
+        color=glm.vec4(0.2, 0.8, 0.3, 1.0)
+    )
+
+    terrain_mat = Material(fragment_shader="grid.frag")
+    terrain_obj = MeshObject(terrain_shape, terrain_mat)
+
+    terrain_obj.transform = glm.mat4(1.0)
+
+    glrenderer.addObject(terrain_obj)
 
     cube_mesh = Cube(color=glm.vec4(0.5,0.5,1.0,1.0), side_length=1.0)
     cone_mesh = Cone(color=glm.vec4(0.5, 0.5, 1.0, 1.0), radius=1.0, height=1.0)
