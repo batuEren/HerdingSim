@@ -10,7 +10,7 @@
  |_______/ |__/  \\__/|__/      \\______/  \\______/       |__/
 
 """
-
+import random
 import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from framework.camera import *
@@ -22,6 +22,8 @@ from framework.materials import Material
 from pyglm import glm
 import tree
 from terrain import *
+
+
 
 def main():
     width, height = 600, 600
@@ -41,9 +43,12 @@ def main():
     #floor_obj.transform = glm.rotate(glm.radians(-90), glm.vec3(1, 0, 0))
     #glrenderer.addObject(floor_obj)
 
+    terrain_width = 100
+    terrain_depth = 100
+
     terrain_shape = Terrain(
-        width=100.0,
-        depth=100.0,
+        width=terrain_width,
+        depth=terrain_depth,
         res_x=200,  # increase for smoother geometry
         res_z=200,
         color=glm.vec4(0.2, 0.8, 0.3, 1.0)
@@ -70,9 +75,16 @@ def main():
 
     cone_obj = MeshObject(mesh=cone_mesh, material=cube_mat, transform=cone_transform)
 
-    objs = tree.build_tree(glm.vec3(0.0, 0.0, 0.0),10.0, 2.0, 6)
-    for o in objs:
-        glrenderer.addObject(o)
+    def createRandomTree(x, z):
+        size = random.random()
+        segments = (int)(3+size*6)
+        objs = tree.build_tree(glm.vec3(x, random_height_func(x,z), z), 3+8.0*size+random.random(), 1+2.0*size+0.5*random.random(), segments)
+        for o in objs:
+            glrenderer.addObject(o)
+
+    for x in range(0,terrain_width, 25):
+        for z in range(0, terrain_depth, 25):
+            createRandomTree(x-50, z-50)
 
     objs = tree.build_tree(glm.vec3(0.0, 0.0, 5.0),15.0, 3.0, 7)
     for o in objs:
