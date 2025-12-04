@@ -1,0 +1,9 @@
+numpy
+glfw
+pyglm
+PyOpenGL
+PyOpenGL_accelerate
+perlin-noise
+pillow
+pygltflib
+open-cv-plus
