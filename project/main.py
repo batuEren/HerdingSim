@@ -54,7 +54,7 @@ def main():
         color=glm.vec4(0.2, 0.8, 0.3, 1.0)
     )
 
-    terrain_mat = Material(fragment_shader="grid.frag")
+    terrain_mat = Material(fragment_shader="shaderGrid.frag")
     terrain_obj = MeshObject(terrain_shape, terrain_mat)
 
     terrain_obj.transform = glm.mat4(1.0)
@@ -82,17 +82,19 @@ def main():
         for o in objs:
             glrenderer.addObject(o)
 
+    x = 0
+    z = 0
+
+    #while(x<terrain_width):
+    #    x += random.randint(20, 30)
+    #    while(z<terrain_depth):
+    #        z += random.randint(20, 30)
+    #        createRandomTree(x - 50, z - 50)
+
+
     for x in range(0,terrain_width, 25):
         for z in range(0, terrain_depth, 25):
-            createRandomTree(x-50, z-50)
-
-    objs = tree.build_tree(glm.vec3(0.0, 0.0, 5.0),15.0, 3.0, 7)
-    for o in objs:
-        glrenderer.addObject(o)
-
-    objs = tree.build_tree(glm.vec3(0.0, 0.0, 10.0),7.0, 1.6, 4)
-    for o in objs:
-        glrenderer.addObject(o)
+            createRandomTree(x-50+random.randint(0, 10), z-50+random.randint(0, 10))
 
     glrenderer.addObject(cube_obj)
     glrenderer.addObject(cone_obj)
