@@ -22,6 +22,7 @@ from framework.materials import Material
 from pyglm import glm
 import tree
 from terrain import *
+from skybox import *
 
 
 
@@ -82,19 +83,27 @@ def main():
         for o in objs:
             glrenderer.addObject(o)
 
-    x = 0
-    z = 0
-
-    #while(x<terrain_width):
-    #    x += random.randint(20, 30)
-    #    while(z<terrain_depth):
-    #        z += random.randint(20, 30)
-    #        createRandomTree(x - 50, z - 50)
-
-
     for x in range(0,terrain_width, 25):
         for z in range(0, terrain_depth, 25):
             createRandomTree(x-50+random.randint(0, 10), z-50+random.randint(0, 10))
+
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    TEXTURE_DIR = os.path.join(BASE_DIR, "..", "textures")
+
+    faces = [
+        os.path.join(TEXTURE_DIR, "right.png"),
+        os.path.join(TEXTURE_DIR, "left.png"),
+        os.path.join(TEXTURE_DIR, "top.png"),
+        os.path.join(TEXTURE_DIR, "bottom.png"),
+        os.path.join(TEXTURE_DIR, "front.png"),
+        os.path.join(TEXTURE_DIR, "back.png"),
+    ]
+
+    skybox_mat = Material(fragment_shader="skybox.frag", vertex_shader="skybox.vert")
+    skybox = Skybox(faces, skybox_mat)
+
+    glrenderer.setSkybox(skybox)
+
 
     glrenderer.addObject(cube_obj)
     glrenderer.addObject(cone_obj)

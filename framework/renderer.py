@@ -32,6 +32,11 @@ class GLRenderer ():
         # light sources
         self.lights = []
 
+        self.skybox = None
+
+    def setSkybox(self, skybox):
+            self.skybox = skybox
+
     def setCamera (self, camera):
         self.glwindow.camera = camera
 
@@ -48,13 +53,16 @@ class GLRenderer ():
         self.objects.append(obj)
 
     def render (self):
-        gl.glClearColor(1.0, 1.0, 1.0, 1.0)
+        gl.glClearColor(0.95, 0.95, 1.0, 1.0)
         gl.glClear(gl.GL_COLOR_BUFFER_BIT)
         gl.glClear(gl.GL_DEPTH_BUFFER_BIT)
         gl.glEnable(gl.GL_DEPTH_TEST)
 
         for o in self.objects:
-            o.draw(self.glwindow.camera, self.lights)
+            o.draw(self.glwindow    .camera, self.lights)
+
+        if self.skybox is not None:
+            self.skybox.draw(self.glwindow.camera, self.lights)
             
         # if self.glwindow.camera.draw_camera:
             # print("fixme")
