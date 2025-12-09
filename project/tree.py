@@ -8,7 +8,7 @@ from framework.materials import Material
 from pyglm import glm
 
 
-def build_tree(position = glm.vec3(0.0, 0., 0.0), height = 4, width = 4, segments= 4):
+def build_tree(height = 4, width = 4, segments= 4):
     objs = []
 
     trunk_height   = height / 5.0
@@ -21,7 +21,7 @@ def build_tree(position = glm.vec3(0.0, 0., 0.0), height = 4, width = 4, segment
     )
     log_mat = Material()
 
-    log_transform = glm.translate(position + glm.vec3(0.0, trunk_height * 0.5, 0.0))
+    log_transform = glm.translate(glm.vec3(0.0, trunk_height * 0.5, 0.0))
     log_obj = MeshObject(log_mesh, log_mat, transform=log_transform)
     objs.append(log_obj)
 
@@ -42,7 +42,7 @@ def build_tree(position = glm.vec3(0.0, 0., 0.0), height = 4, width = 4, segment
 
         cone_center_y = trunk_height + cone_height*0.7 * (0.5 + i)
 
-        cone_transform = glm.translate(position + glm.vec3(0.0, cone_center_y, 0.0))
+        cone_transform = glm.translate(glm.vec3(0.0, cone_center_y, 0.0))
         cone_obj = MeshObject(cone_mesh, cone_mat, transform=cone_transform)
         objs.append(cone_obj)
 

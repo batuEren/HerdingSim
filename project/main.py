@@ -76,16 +76,43 @@ def main():
 
     cone_obj = MeshObject(mesh=cone_mesh, material=cube_mat, transform=cone_transform)
 
-    def createRandomTree(x, z):
-        size = random.random()
-        segments = (int)(3+size*6)
-        objs = tree.build_tree(glm.vec3(x, random_height_func(x,z), z), 3+8.0*size+random.random(), 1+2.0*size+0.5*random.random(), segments)
-        for o in objs:
-            glrenderer.addObject(o)
+    def createRandomTrees(amount):
+        treeTypes = []
+        for i in range(0, amount):
+            size = random.random()
+            segments = int(3 + size * 6)
+            objs = tree.build_tree(
+                3 + 8.0 * size + random.random(),
+                1 + 2.0 * size + 0.5 * random.random(),
+                segments
+            )
+            treeTypes.append(objs)
+        return treeTypes
 
-    for x in range(0,terrain_width, 25):
-        for z in range(0, terrain_depth, 25):
-            createRandomTree(x-50+random.randint(0, 10), z-50+random.randint(0, 10))
+    treeTypes = createRandomTrees(5)
+
+    def putRandomTree(treeTypes, x, z):
+        rand = random.randrange(len(treeTypes))
+        template_objs = treeTypes[rand]
+
+        base_y = random_height_func(x, z)
+
+        tree_translation = glm.translate(glm.mat4(1.0), glm.vec3(x, base_y, z))
+
+        for o in template_objs:
+            new_transform = tree_translation * o.transform
+
+            placed_obj = MeshObject(
+                mesh=o.mesh,
+                material=o.material,
+                transform=new_transform
+            )
+
+            glrenderer.addObject(placed_obj)
+
+    for x in range(0,terrain_width, 15):
+        for z in range(0, terrain_depth, 15):
+            putRandomTree(treeTypes, x-50+random.randint(0, 10), z-50+random.randint(0, 10))
 
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     TEXTURE_DIR = os.path.join(BASE_DIR, "..", "textures")
