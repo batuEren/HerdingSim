@@ -20,7 +20,7 @@ from framework.shapes import Cube, Triangle, Quad
 from framework.objects import MeshObject
 from framework.materials import Material
 from pyglm import glm
-import tree
+from tree import *
 from terrain import *
 from skybox import *
 
@@ -76,12 +76,27 @@ def main():
 
     cone_obj = MeshObject(mesh=cone_mesh, material=cube_mat, transform=cone_transform)
 
+    tree_mesh = TreeShape(height=4, width=4, segments=4)
+    tree_mat = Material()
+    # identity transform – tree_mesh already has all geometry in place
+    tree_transform = glm.translate(glm.vec3(1.0))
+    tree_obj = MeshObject(tree_mesh, tree_mat, transform=tree_transform)
+    glrenderer.addObject(tree_obj)
+
+    def build_tree(height=4.0, width=4.0, segments=4):
+        tree_mesh = TreeShape(height=height, width=width, segments=segments)
+        tree_mat = Material()
+        # identity transform – tree_mesh already has all geometry in place
+        tree_transform = glm.translate(glm.vec3(1.0))
+        tree_obj = MeshObject(tree_mesh, tree_mat, transform=tree_transform)
+        return tree_obj
+
     def createRandomTrees(amount):
         treeTypes = []
         for i in range(0, amount):
             size = random.random()
             segments = int(3 + size * 6)
-            objs = tree.build_tree(
+            objs = build_tree(
                 3 + 8.0 * size + random.random(),
                 1 + 2.0 * size + 0.5 * random.random(),
                 segments
@@ -96,19 +111,9 @@ def main():
         template_objs = treeTypes[rand]
 
         base_y = random_height_func(x, z)
-
+        glrenderer.addObject(build_tree())
         tree_translation = glm.translate(glm.mat4(1.0), glm.vec3(x, base_y, z))
 
-        for o in template_objs:
-            new_transform = tree_translation * o.transform
-
-            placed_obj = MeshObject(
-                mesh=o.mesh,
-                material=o.material,
-                transform=new_transform
-            )
-
-            glrenderer.addObject(placed_obj)
 
     for x in range(0,terrain_width, 15):
         for z in range(0, terrain_depth, 15):
