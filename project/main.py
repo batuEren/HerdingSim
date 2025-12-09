@@ -21,6 +21,7 @@ from framework.objects import MeshObject
 from framework.materials import Material
 from pyglm import glm
 import tree
+from fence import *
 from terrain import *
 from skybox import *
 
@@ -76,6 +77,8 @@ def main():
 
     cone_obj = MeshObject(mesh=cone_mesh, material=cube_mat, transform=cone_transform)
 
+    # -- TREE STUFF --
+
     def createRandomTrees(amount):
         treeTypes = []
         for i in range(0, amount):
@@ -110,9 +113,31 @@ def main():
 
             glrenderer.addObject(placed_obj)
 
-    for x in range(0,terrain_width, 15):
-        for z in range(0, terrain_depth, 15):
+    for x in range(0,terrain_width, 30):
+        for z in range(0, terrain_depth, 30):
             putRandomTree(treeTypes, x-50+random.randint(0, 10), z-50+random.randint(0, 10))
+
+
+    # -- FENCE --
+    def buildFence(fence_start = glm.vec3(-40.0, 0.0, -40.0), fence_end   = glm.vec3( 40.0, 0.0, -40.0)):
+        fence_objs = build_fence(
+            fence_start,
+            fence_end,
+            spacing=3.0,
+            height_func=random_height_func
+        )
+
+        for o in fence_objs:
+            glrenderer.addObject(o)
+
+    rad = 20
+
+    buildFence(glm.vec3(-rad, 0.0, -rad), glm.vec3(rad, 0.0, -rad))
+    buildFence(glm.vec3(rad, 0.0, -rad), glm.vec3(rad, 0.0, rad))
+    buildFence(glm.vec3(rad, 0.0, rad), glm.vec3(-rad, 0.0, rad))
+    buildFence(glm.vec3(-rad, 0.0, rad), glm.vec3(-rad, 0.0, -rad))
+
+    # -- SKYBOX --
 
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     TEXTURE_DIR = os.path.join(BASE_DIR, "..", "textures")
