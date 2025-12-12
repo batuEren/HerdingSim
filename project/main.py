@@ -24,6 +24,7 @@ import tree
 from fence import *
 from terrain import *
 from skybox import *
+from collections import defaultdict
 
 
 
@@ -63,20 +64,6 @@ def main():
 
     glrenderer.addObject(terrain_obj)
 
-    cube_mesh = Cube(color=glm.vec4(0.5,0.5,1.0,1.0), side_length=1.0)
-    cone_mesh = Cone(color=glm.vec4(0.5, 0.5, 1.0, 1.0), radius=1.0, height=1.0)
-
-    cube_mat = Material()
-    cube_transform = glm.translate(glm.vec3(0.0, 1.0, -2.0))
-    cube_transform2 = glm.translate(glm.vec3(2.0, 1.0, -2.0))
-    cone_transform = glm.translate(glm.vec3(0.0, 3.0, -2.0))
-
-    cube_obj = MeshObject(mesh=cube_mesh, material=cube_mat, transform=cube_transform)
-
-    cube_obj2 = MeshObject(mesh=cube_mesh, material=cube_mat, transform=cube_transform2)
-
-    cone_obj = MeshObject(mesh=cone_mesh, material=cube_mat, transform=cone_transform)
-
     # -- TREE STUFF --
 
     def createRandomTrees(amount):
@@ -93,6 +80,8 @@ def main():
         return treeTypes
 
     treeTypes = createRandomTrees(5)
+
+    tree_instances = defaultdict(list)
 
     def putRandomTree(treeTypes, x, z):
         rand = random.randrange(len(treeTypes))
@@ -113,8 +102,8 @@ def main():
 
             glrenderer.addObject(placed_obj)
 
-    for x in range(0,terrain_width, 30):
-        for z in range(0, terrain_depth, 30):
+    for x in range(0,terrain_width, 15):
+        for z in range(0, terrain_depth, 15):
             putRandomTree(treeTypes, x-50+random.randint(0, 10), z-50+random.randint(0, 10))
 
 
@@ -130,7 +119,7 @@ def main():
         for o in fence_objs:
             glrenderer.addObject(o)
 
-    rad = 20
+    rad = 15
 
     buildFence(glm.vec3(-rad, 0.0, -rad), glm.vec3(rad, 0.0, -rad))
     buildFence(glm.vec3(rad, 0.0, -rad), glm.vec3(rad, 0.0, rad))
@@ -155,11 +144,6 @@ def main():
     skybox = Skybox(faces, skybox_mat)
 
     glrenderer.setSkybox(skybox)
-
-
-    glrenderer.addObject(cube_obj)
-    glrenderer.addObject(cone_obj)
-    glrenderer.addObject(cube_obj2)
 
     while not glfw.window_should_close(glwindow.window):
         glrenderer.render()
