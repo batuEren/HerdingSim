@@ -82,7 +82,7 @@ def main():
         use_mipmaps=False,
         clamp_to_edge=True
     )
-    grass_mat = Material(color_texture=grass_texture)
+    grass_mat = Material(color_texture=grass_texture, fragment_shader="grassShader.frag")
     #grass_mat = Material()
 
     grass_obj = MeshObject(grass_mesh, grass_mat)
@@ -92,7 +92,7 @@ def main():
     transforms = []
     step = 0.5
     jitter = 0.5
-    density = 0.85
+    density = 0.95
 
     x = 0
     while(x<terrain_width):
