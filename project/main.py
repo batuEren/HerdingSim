@@ -101,7 +101,8 @@ def main():
     for key, items in tree_instances.items():
         mesh, mat, _ = items[0]
         matrices = [M for (_, _, M) in items]
-        instanced_obj = InstancedMeshObject(mesh, mat, matrices)
+        colors = [mesh.color] * len(matrices)
+        instanced_obj = InstancedMeshObject(mesh, mat, matrices, colors)
         glrenderer.addObject(instanced_obj)
 
 
