@@ -18,13 +18,16 @@ from framework.renderer import *
 from framework.light import *
 from framework.shapes import Cube, Triangle, Quad
 from framework.objects import MeshObject, InstancedMeshObject
-from framework.materials import Material
+from framework.materials import Material, Texture
 from pyglm import glm
 import tree
 from fence import *
+from grass import *
 from terrain import *
 from skybox import *
 from collections import defaultdict
+from OpenGL.GL import *
+
 
 
 
@@ -37,6 +40,8 @@ def main():
     camera.updateView()
 
     glrenderer = GLRenderer(glwindow, camera)
+    glEnable(GL_BLEND)
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
     glrenderer.addLight(PointLight(glm.vec4(10.0, 10.0, 10.0, 1.0), glm.vec4(0.5, 0.5, 0.5, 1.0)))
 
@@ -45,6 +50,11 @@ def main():
     #floor_obj = MeshObject(floor_shape, floor_mat)
     #floor_obj.transform = glm.rotate(glm.radians(-90), glm.vec3(1, 0, 0))
     #glrenderer.addObject(floor_obj)
+
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    TEXTURE_DIR = os.path.join(BASE_DIR, "..", "textures")
+
+    # -- TERRAIN --
 
     terrain_width = 200
     terrain_depth = 200
@@ -63,6 +73,56 @@ def main():
     terrain_obj.transform = glm.mat4(1.0)
 
     glrenderer.addObject(terrain_obj)
+
+    # -- GRASS --
+
+    grass_mesh = Grass(radius=0.25, height=0.7)
+    grass_texture = Texture(
+        file_path=os.path.join(TEXTURE_DIR, "grass1.png"),
+        use_mipmaps=False,
+        clamp_to_edge=True
+    )
+    grass_mat = Material(color_texture=grass_texture)
+    #grass_mat = Material()
+
+    grass_obj = MeshObject(grass_mesh, grass_mat)
+    grass_obj.transform = glm.translate(glm.vec3(1.0, 10, 1.0))
+    glrenderer.addObject(grass_obj)
+
+    transforms = []
+    step = 0.5
+    jitter = 0.5
+    density = 0.85
+
+    x = 0
+    while(x<terrain_width):
+        z = 0
+        while(z<terrain_depth):
+            if random.random() > density:
+                continue
+
+            wx = x + (random.random() * 2.0 - 1.0) * jitter - terrain_width / 2
+            wz = z + (random.random() * 2.0 - 1.0) * jitter - terrain_depth / 2
+            wy = random_height_func(wx, wz)
+
+            yaw = random.random() * 6.28318530718
+            s = 0.7 + random.random() * 0.7
+
+            T = glm.translate(glm.mat4(1.0), glm.vec3(wx, wy, wz))
+            R = glm.rotate(glm.mat4(1.0), yaw, glm.vec3(0, 1, 0))
+            S = glm.scale(glm.mat4(1.0), glm.vec3(s, 1.0, s))
+
+            transforms.append(T * R * S)
+            z+=step
+        x+=step
+
+
+
+    grass_colors = [grass_mesh.color] * len(transforms)
+
+    grass_inst = InstancedMeshObject(grass_mesh, grass_mat, transforms, grass_colors)
+    glrenderer.addObject(grass_inst)
+
 
     # -- TREE STUFF --
 
@@ -88,7 +148,7 @@ def main():
         template_objs = treeTypes[rand]
 
         base_y = random_height_func(x, z)
-        tree_translation = glm.translate(glm.mat4(1.0), glm.vec3(x, base_y, z))
+        tree_translation = glm.translate(glm.vec3(x, base_y, z))
 
         for o in template_objs:
             M = tree_translation * o.transform
@@ -126,10 +186,6 @@ def main():
     buildFence(glm.vec3(-rad, 0.0, rad), glm.vec3(-rad, 0.0, -rad))
 
     # -- SKYBOX --
-
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    TEXTURE_DIR = os.path.join(BASE_DIR, "..", "textures")
-
     faces = [
         os.path.join(TEXTURE_DIR, "right.png"),
         os.path.join(TEXTURE_DIR, "left.png"),

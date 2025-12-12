@@ -4,11 +4,14 @@ from pyglm import glm
 from PIL import Image
 
 class Texture:
-    def __init__(self, resolution=None, data=None, file_path=None):
+    def __init__(self, resolution=None, data=None, file_path=None,
+                 use_mipmaps=True, clamp_to_edge=False):
         """
         Create a texture either manually (width, height, optional data)
         or by loading from a file.
         """
+        self.use_mipmaps = use_mipmaps
+        self.clamp_to_edge = clamp_to_edge
         self.resolution = resolution
         self.data = None
         self.texture_id = None
@@ -71,13 +74,20 @@ class Texture:
             self.resolution.x, self.resolution.y, 0,
             gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, self.data
         )
-        gl.glGenerateMipmap(gl.GL_TEXTURE_2D)
+        #gl.glGenerateMipmap(gl.GL_TEXTURE_2D)
 
         # Default parameters
-        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR_MIPMAP_LINEAR)
+        if self.use_mipmaps:
+            gl.glGenerateMipmap(gl.GL_TEXTURE_2D)
+            gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR_MIPMAP_LINEAR)
+        else:
+            gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR)
+
         gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR)
-        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_S, gl.GL_REPEAT)
-        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_T, gl.GL_REPEAT)
+
+        wrap = gl.GL_CLAMP_TO_EDGE if self.clamp_to_edge else gl.GL_REPEAT
+        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_S, wrap)
+        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_T, wrap)
 
         gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
         self.dirty = False
