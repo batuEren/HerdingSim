@@ -17,7 +17,7 @@ from framework.camera import *
 from framework.renderer import *
 from framework.light import *
 from framework.shapes import Cube, Triangle, Quad
-from framework.objects import MeshObject
+from framework.objects import MeshObject, InstancedMeshObject
 from framework.materials import Material
 from pyglm import glm
 import tree
@@ -32,7 +32,7 @@ def main():
     width, height = 600, 600
     glwindow = OpenGLWindow(width, height)
 
-    camera = Flycamera(width, height, 70.0, 0.1, 100.0)
+    camera = Flycamera(width, height, 70.0, 0.1, 200.0)
     camera.position += glm.vec3(0.0, 6.0, 7.0)
     camera.updateView()
 
@@ -46,14 +46,14 @@ def main():
     #floor_obj.transform = glm.rotate(glm.radians(-90), glm.vec3(1, 0, 0))
     #glrenderer.addObject(floor_obj)
 
-    terrain_width = 100
-    terrain_depth = 100
+    terrain_width = 200
+    terrain_depth = 200
 
     terrain_shape = Terrain(
         width=terrain_width,
         depth=terrain_depth,
-        res_x=200,  # increase for smoother geometry
-        res_z=200,
+        res_x=50,  # increase for smoother geometry
+        res_z=50,
         color=glm.vec4(0.2, 0.8, 0.3, 1.0)
     )
 
@@ -88,23 +88,21 @@ def main():
         template_objs = treeTypes[rand]
 
         base_y = random_height_func(x, z)
-
         tree_translation = glm.translate(glm.mat4(1.0), glm.vec3(x, base_y, z))
 
         for o in template_objs:
-            new_transform = tree_translation * o.transform
+            M = tree_translation * o.transform
+            tree_instances[(id(o.mesh), id(o.material))].append((o.mesh, o.material, M))
 
-            placed_obj = MeshObject(
-                mesh=o.mesh,
-                material=o.material,
-                transform=new_transform
-            )
+    for x in range(0,terrain_width, 7):
+        for z in range(0, terrain_depth, 7):
+            putRandomTree(treeTypes, x-(terrain_width/2)+random.randint(0, 10), z-(terrain_depth/2)+random.randint(0, 10))
 
-            glrenderer.addObject(placed_obj)
-
-    for x in range(0,terrain_width, 15):
-        for z in range(0, terrain_depth, 15):
-            putRandomTree(treeTypes, x-50+random.randint(0, 10), z-50+random.randint(0, 10))
+    for key, items in tree_instances.items():
+        mesh, mat, _ = items[0]
+        matrices = [M for (_, _, M) in items]
+        instanced_obj = InstancedMeshObject(mesh, mat, matrices)
+        glrenderer.addObject(instanced_obj)
 
 
     # -- FENCE --

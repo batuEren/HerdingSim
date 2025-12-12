@@ -254,7 +254,7 @@ class Flycamera (Camera):
         super().__init__(width, height, fov, near, far)
 
         # size of step when using ASWD
-        self.step_factor = 0.3
+        self.step_factor = 0.6
         # rotation sensitivity
         self.rot_sensitivity = 0.1
 
