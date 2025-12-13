@@ -43,7 +43,7 @@ def main():
     glEnable(GL_BLEND)
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
-    glrenderer.addLight(PointLight(glm.vec4(10.0, 10.0, 10.0, 1.0), glm.vec4(0.5, 0.5, 0.5, 1.0)))
+    glrenderer.addLight(PointLight(glm.vec4(200.0, 200.0, 200.0, 1.0), glm.vec4(0.5, 0.5, 0.5, 1.0)))
 
     #floor_shape = Quad(width=100, height=100)
     #floor_mat = Material(fragment_shader="grid.frag")
@@ -59,15 +59,18 @@ def main():
     terrain_width = 200
     terrain_depth = 200
 
+    colorRand = random.random()
+    ground_color=glm.vec4(0.15 + 0.4 * colorRand, 0.75 + 0.2 * colorRand, 0.15 + 0.05 * colorRand, 1.0),
+
     terrain_shape = Terrain(
         width=terrain_width,
         depth=terrain_depth,
         res_x=50,  # increase for smoother geometry
         res_z=50,
-        color=glm.vec4(0.2, 0.8, 0.3, 1.0)
+        color=ground_color
     )
 
-    terrain_mat = Material(fragment_shader="shaderGrid.frag")
+    terrain_mat = Material(fragment_shader="shader.frag")
     terrain_obj = MeshObject(terrain_shape, terrain_mat)
 
     terrain_obj.transform = glm.mat4(1.0)
@@ -76,9 +79,9 @@ def main():
 
     # -- GRASS --
 
-    grass_mesh = Grass(radius=0.25, height=0.7)
+    grass_mesh = Grass(radius=0.45, height=0.9, color=ground_color)
     grass_texture = Texture(
-        file_path=os.path.join(TEXTURE_DIR, "grass1.png"),
+        file_path=os.path.join(TEXTURE_DIR, "grass2.png"),
         use_mipmaps=False,
         clamp_to_edge=True
     )
@@ -99,6 +102,7 @@ def main():
         z = 0
         while(z<terrain_depth):
             if random.random() > density:
+                z += step
                 continue
 
             wx = x + (random.random() * 2.0 - 1.0) * jitter - terrain_width / 2
@@ -117,11 +121,15 @@ def main():
         x+=step
 
 
-
     grass_colors = [grass_mesh.color] * len(transforms)
 
     grass_inst = InstancedMeshObject(grass_mesh, grass_mat, transforms, grass_colors)
     glrenderer.addObject(grass_inst)
+
+    def animateGrass():
+        #animate
+        pass
+
 
 
     # -- TREE STUFF --

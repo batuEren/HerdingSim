@@ -3,6 +3,7 @@ import OpenGL.GL as gl
 import glm
 import numpy as np
 from .shaders import createShader
+import time
 from . import Texture
 
 class Material:
@@ -43,6 +44,15 @@ class Material:
     def set_uniforms(self, is_instanced, obj, camera, lights):
         program = self.get_shader_program(is_instanced)
         self.use(program)
+
+        if not hasattr(self, "_t0"):
+            self._t0 = time.perf_counter()
+        t = time.perf_counter() - self._t0
+
+        loc = gl.glGetUniformLocation(program, "uTime")
+        if loc != -1:
+            gl.glUniform1f(loc, float(t))
+            print("set_uniforms", t)
 
         # Common uniforms
         loc_view = gl.glGetUniformLocation(program, "view")
