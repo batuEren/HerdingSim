@@ -60,7 +60,7 @@ def main():
     terrain_depth = 200
 
     colorRand = random.random()
-    ground_color=glm.vec4(0.15 + 0.4 * colorRand, 0.75 + 0.2 * colorRand, 0.15 + 0.05 * colorRand, 1.0),
+    ground_color=glm.vec4(0.45 + 0.4 * colorRand, 0.4 + 0.2 * colorRand, 0.15 + 0.05 * colorRand, 1.0)
 
     terrain_shape = Terrain(
         width=terrain_width,
@@ -79,14 +79,14 @@ def main():
 
     # -- GRASS --
 
-    grass_mesh = Grass(radius=0.45, height=0.9, color=ground_color)
+    grass_color = glm.vec4(0.15 + 0.4 * colorRand, 0.75 + 0.2 * colorRand, 0.15 + 0.05 * colorRand, 1.0)
+    grass_mesh = Grass(radius=0.45, height=0.9, color=grass_color)
     grass_texture = Texture(
-        file_path=os.path.join(TEXTURE_DIR, "grass2.png"),
+        file_path=os.path.join(TEXTURE_DIR, "grass4.png"),
         use_mipmaps=False,
         clamp_to_edge=True
     )
-    grass_mat = Material(color_texture=grass_texture, fragment_shader="grassShader.frag")
-    #grass_mat = Material()
+    grass_mat = Material(color_texture=grass_texture, fragment_shader="grassShader.frag", vertex_shader= "grassShader.vert")
 
     grass_obj = MeshObject(grass_mesh, grass_mat)
     grass_obj.transform = glm.translate(glm.vec3(1.0, 10, 1.0))
@@ -164,6 +164,7 @@ def main():
 
     for x in range(0,terrain_width, 7):
         for z in range(0, terrain_depth, 7):
+            #continue
             putRandomTree(treeTypes, x-(terrain_width/2)+random.randint(0, 10), z-(terrain_depth/2)+random.randint(0, 10))
 
     for key, items in tree_instances.items():
