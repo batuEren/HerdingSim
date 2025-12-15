@@ -14,8 +14,8 @@ uniform vec2 texture_scale;
 // --- wind uniforms ---
 uniform float uTime;
 uniform float wind_color_strength = 1.70;
-uniform float wind_color_freq = 1.2;          // a bit faster
-uniform vec2  wind_color_world_scale = vec2(0.22, 0.17); // larger => more variation
+uniform float wind_color_freq = 1.2;
+uniform vec2  wind_color_world_scale = vec2(0.22, 0.17);
 
 in vec3 frag_normal;
 in vec4 frag_color;
@@ -24,7 +24,7 @@ in vec2 frag_uv;
 
 #ifdef USE_ALBEDO_TEXTURE
 uniform sampler2D albedo_texture_sampler;
-uniform float alpha_cutoff = 0.3;
+uniform float alpha_cutoff = 0.65;
 #endif
 
 out vec4 out_color;
@@ -40,30 +40,34 @@ void main()
     float alpha = frag_color.a;
 
 #ifdef USE_ALBEDO_TEXTURE
-    vec4 tex_color = texture(albedo_texture_sampler, scaled_uv);
+    vec4 tex = texture(albedo_texture_sampler, scaled_uv);
 
-    alpha *= tex_color.a;
-    if (alpha < alpha_cutoff) discard;
+    // Kill fully transparent texels early (avoids mipmap fringe)
+    if (tex.a <= 0.001)
+        discard;
 
-    base_color *= tex_color.rgb;
+    // Fix RGB fringe from transparent pixels (alpha bleed issue)
+    tex.rgb /= max(tex.a, 1e-4);
+
+    alpha *= tex.a;
+    if (alpha < alpha_cutoff)
+        discard;
+
+    base_color *= tex.rgb;
 #endif
 
-    // --- wind shimmer / color modulation (stronger + more organic) ---
+    // --- wind shimmer / color modulation ---
     float phase = dot(frag_pos.xz, wind_color_world_scale) + uTime * wind_color_freq;
 
-    // 0..1 wind signal with some "gustiness"
     float w1 = sin(phase);
     float w2 = sin(phase * 1.73 + 1.2);
     float w3 = sin(phase * 0.63 - 0.7);
-    float w  = 0.5 + 0.5 * (0.55*w1 + 0.30*w2 + 0.15*w3);  // roughly 0..1
+    float w  = 0.5 + 0.5 * (0.55*w1 + 0.30*w2 + 0.15*w3);
 
-    // Use w to tint: darker in troughs, warmer/brighter in peaks
-    vec3 darkTint = vec3(0.92, 0.97, 0.92);   // slightly darker/colder
-    vec3 gustTint = vec3(1.10, 1.10, 0.95);   // slightly brighter/yellower
-
+    vec3 darkTint = vec3(0.92, 0.97, 0.92);
+    vec3 gustTint = vec3(1.10, 1.10, 0.95);
     vec3 windTint = mix(darkTint, gustTint, w);
 
-    // Apply tint strength (0 => no change, 1 => full tint)
     base_color = mix(base_color, base_color * windTint, wind_color_strength);
 
     // Lighting
@@ -83,5 +87,5 @@ void main()
         result += diffuse + specular;
     }
 
-    out_color = vec4(result, 1.0);
+    out_color = vec4(result, alpha); // <-- important
 }

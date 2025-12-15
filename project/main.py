@@ -21,6 +21,7 @@ from framework.objects import MeshObject, InstancedMeshObject
 from framework.materials import Material, Texture
 from pyglm import glm
 import tree
+import tree2
 from fence import *
 from grass import *
 from terrain import *
@@ -77,7 +78,7 @@ def main():
     grass_mesh = Grass(radius=0.45, height=0.9, color=grass_color)
     grass_texture = Texture(
         file_path=os.path.join(TEXTURE_DIR, "grass6.png"),
-        use_mipmaps=False,
+        use_mipmaps=True,
         clamp_to_edge=True
     )
     grass_mat = Material(color_texture=grass_texture, fragment_shader="grassShader.frag", vertex_shader= "grassShader.vert")
@@ -159,6 +160,12 @@ def main():
 
     # -- TREE STUFF --
 
+    objs = tree2.build_tree_instanced()
+    for o in objs:
+        glrenderer.addObject(o)
+
+    # -- OLD TREE --
+
     def createRandomTrees(amount):
         treeTypes = []
         for i in range(0, amount):
@@ -189,8 +196,8 @@ def main():
 
     for x in range(0,terrain_width, 7):
         for z in range(0, terrain_depth, 7):
-            #continue
-            putRandomTree(treeTypes, x-(terrain_width/2)+random.randint(0, 10), z-(terrain_depth/2)+random.randint(0, 10))
+            continue
+            #putRandomTree(treeTypes, x-(terrain_width/2)+random.randint(0, 10), z-(terrain_depth/2)+random.randint(0, 10))
 
     for key, items in tree_instances.items():
         mesh, mat, _ = items[0]
