@@ -1,7 +1,10 @@
+import time
+
 import OpenGL.GL as gl
 import numpy as np
 from pyglm import glm
 from PIL import Image
+import glfw
 
 class Skybox:
     def __init__(self, faces, material):
@@ -132,6 +135,14 @@ class Skybox:
         gl.glBindTexture(gl.GL_TEXTURE_CUBE_MAP, self.cubemap_tex)
         loc_skybox = gl.glGetUniformLocation(program, "skybox")
         gl.glUniform1i(loc_skybox, 0)
+
+        loc_time = gl.glGetUniformLocation(program, "uTime")
+        if loc_time != -1:
+            gl.glUniform1f(loc_time, glfw.get_time())  # or your engine time
+
+        loc_daylen = gl.glGetUniformLocation(program, "dayLength")
+        if loc_daylen != -1:
+            gl.glUniform1f(loc_daylen, 120.0)  # seconds per full cycle
 
         gl.glBindVertexArray(self.vao)
         gl.glDrawArrays(gl.GL_TRIANGLES, 0, 36)
