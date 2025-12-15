@@ -17,7 +17,7 @@ uniform mat4 projection;
 
 // ---- wind uniforms ----
 uniform float uTime;
-uniform float wind_strength = 0.10;        // world units (try 0.03..0.12)
+uniform float wind_strength = 0.40;        // world units (try 0.03..0.12)
 uniform float wind_freq = 1.2;             // speed
 uniform vec2  wind_dir = vec2(1.0, 0.3);   // direction in XZ
 uniform vec2  wind_world_scale = vec2(0.12, 0.10); // spatial variation

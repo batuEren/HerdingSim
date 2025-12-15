@@ -20,18 +20,12 @@ def foliage_transforms_pine(
     tilt_deg: float = 25.0,
     min_scale: float = 0.7,
     max_scale: float = 1.25,
-    # --- new knobs ---
     bottom_boost: float = 0.35,     # fraction of cards reserved for a dense bottom “skirt”
     bottom_band: float = 0.28,      # bottom skirt height as fraction of foliage_height
     shell_prob: float = 0.75,       # how many cards prefer the outer shell (silhouette)
 ):
     """
     Returns a list of glm.mat4 instance transforms for pine foliage cards.
-
-    Key ideas:
-    - Bias more cards toward the bottom (better silhouette / density).
-    - Bias more cards toward the cone shell (fills outline).
-    - Extra bottom “skirt” pass to guarantee density where it matters most.
     """
     T = []
 
@@ -113,7 +107,7 @@ import os
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TEXTURE_DIR = os.path.join(BASE_DIR, "..", "textures")
 
-def build_tree_instanced(height=6.0, width=2.0, foliage_cards=250):
+def build_tree_instanced(height=6.0, width=2.0, foliage_cards=750):
     objs = []
 
     trunk_height   = height*0.5
@@ -139,7 +133,7 @@ def build_tree_instanced(height=6.0, width=2.0, foliage_cards=250):
     #                       fragment_shader="foliage.frag")
 
     leaf_texture = Texture(
-        file_path=os.path.join(TEXTURE_DIR, "leaf2.png"),
+        file_path=os.path.join(TEXTURE_DIR, "leaf6.png"),
         use_mipmaps=True,
         clamp_to_edge=True
     )
@@ -148,8 +142,8 @@ def build_tree_instanced(height=6.0, width=2.0, foliage_cards=250):
 
     foliage_mesh = FoliageCard(
         color=glm.vec4(1,1,1,1),
-        width=0.9,
-        height=1.2
+        width=1.8,
+        height=2.0
     )
 
     transforms = foliage_transforms_pine(
@@ -160,8 +154,6 @@ def build_tree_instanced(height=6.0, width=2.0, foliage_cards=250):
         tilt_deg=20.0
     )
 
-    # IMPORTANT: use your instancing path
-    # If MeshObject supports instancing via `transforms=...` (like your other code):
     foliage_obj = InstancedMeshObject(foliage_mesh, foliage_mat, transforms=transforms)
     objs.append(foliage_obj)
 

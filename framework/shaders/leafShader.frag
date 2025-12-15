@@ -24,7 +24,10 @@ in vec2 frag_uv;
 
 #ifdef USE_ALBEDO_TEXTURE
 uniform sampler2D albedo_texture_sampler;
-uniform float alpha_cutoff = 0.75;
+uniform float alpha_cutoff_near = 0.45;  // more holes up close
+uniform float alpha_cutoff_far  = 0.05;  // fewer holes far away (prevents sky leaks)
+uniform float mip_fade_start    = 1.0;   // start adapting around mip 1
+uniform float mip_fade_end      = 5.0;   // fully adapted by mip ~5
 #endif
 
 out vec4 out_color;
@@ -40,19 +43,34 @@ void main()
     float alpha = frag_color.a;
 
 #ifdef USE_ALBEDO_TEXTURE
-    vec4 tex = texture(albedo_texture_sampler, scaled_uv);
+    vec2 uv = scaled_uv;
 
-    if (tex.a <= 0.001) discard;
-    tex.rgb /= max(tex.a, 1e-4);
+    // regular mipped sample for color
+    vec4 texColor = texture(albedo_texture_sampler, uv);
 
-    alpha *= tex.a;
+    // query what mip we’re on
+    float lod = textureQueryLod(albedo_texture_sampler, uv).x;
 
-    // With A2C, cutoff can be lower (lets MSAA handle edge smoothing)
-    if (alpha < alpha_cutoff) discard;
+    // bias alpha to a sharper mip (tune 1.0..2.5)
+    float alphaBias = 2.0;
+    float alphaLod  = max(lod - alphaBias, 0.0);
 
-    base_color *= tex.rgb;
+    // alpha from sharper mip
+    float a = textureLod(albedo_texture_sampler, uv, alphaLod).a;
+
+    // optional fringe fix for rgb (keep using texColor.a here)
+    vec3 rgb = texColor.rgb / max(texColor.a, 1e-4);
+
+    alpha *= a;
+
+    // IMPORTANT: far cutoff should be LOWER than near
+    float tMip = clamp((lod - mip_fade_start) / max(1e-3, (mip_fade_end - mip_fade_start)), 0.0, 1.0);
+    float cutoff = mix(alpha_cutoff_near, alpha_cutoff_far, tMip);
+
+    if (alpha < cutoff) discard;
+
+    base_color *= rgb;
 #endif
-
     // --- wind shimmer / color modulation ---
     float phase = dot(frag_pos.xz, wind_color_world_scale) + uTime * wind_color_freq;
 

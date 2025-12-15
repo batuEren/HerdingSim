@@ -157,60 +157,92 @@ def main():
     grass_inst = InstancedMeshObject(grass_mesh, grass_mat, transforms, grass_colors)
     glrenderer.addObject(grass_inst)
 
-    def animateGrass():
-        #animate
-        pass
 
-
-
-    # -- TREE STUFF --
-
-    objs = tree2.build_tree_instanced()
-    for o in objs:
-        glrenderer.addObject(o)
-
-    # -- OLD TREE --
+    # -- TREE --
 
     def createRandomTrees(amount):
         treeTypes = []
-        for i in range(0, amount):
+        for i in range(amount):
             size = random.random()
-            segments = int(3 + size * 6)
-            objs = tree.build_tree(
-                3 + 8.0 * size + random.random(),
-                1 + 2.0 * size + 0.5 * random.random(),
-                segments
+
+            objs = tree2.build_tree_instanced(
+                8 + 16.0 * size,
+                2 + 4.0 * size,
+                foliage_cards=1500+(int)(size*2000)
             )
             treeTypes.append(objs)
         return treeTypes
 
     treeTypes = createRandomTrees(5)
 
+    # store only matrices (and optional per-instance colors) per instancing group
     tree_instances = defaultdict(list)
+
+    def _is_instanced_obj(o):
+        # adapt if your class names differ
+        return isinstance(o, InstancedMeshObject) or hasattr(o, "transforms")
 
     def putRandomTree(treeTypes, x, z):
         rand = random.randrange(len(treeTypes))
         template_objs = treeTypes[rand]
 
         base_y = random_height_func(x, z)
-        tree_translation = glm.translate(glm.vec3(x, base_y, z))
+        tree_translation = glm.translate(glm.mat4(1.0), glm.vec3(x, base_y, z))
 
         for o in template_objs:
-            M = tree_translation * o.transform
-            tree_instances[(id(o.mesh), id(o.material))].append((o.mesh, o.material, M))
+            # local transform of that object inside the tree (trunk offset, foliage offset, etc.)
+            local_obj = getattr(o, "transform", glm.mat4(1.0))
+            obj_world = tree_translation * local_obj
 
-    for x in range(0,terrain_width, 7):
-        for z in range(0, terrain_depth, 7):
+            key = (id(o.mesh), id(o.material))
+
+            if _is_instanced_obj(o):
+                # foliage: flatten (tree * obj_local) * leaf_local
+                leaf_transforms = getattr(o, "transforms", None)
+                if leaf_transforms is None:
+                    # some implementations store matrices under a different name
+                    leaf_transforms = getattr(o, "matrices", [])
+
+                for L in leaf_transforms:
+                    tree_instances[key].append(obj_world * L)
+            else:
+                # trunk: single matrix
+                tree_instances[key].append(obj_world)
+
+    # --- place many trees ---
+    step = 20
+    for x in range(0, terrain_width, step):
+        for z in range(0, terrain_depth, step):
+            putRandomTree(
+                treeTypes,
+                x - (terrain_width / 2) + random.randint(0, 10),
+                z - (terrain_depth / 2) + random.randint(0, 10),
+            )
+
+    # --- build final instanced objects ---
+    for key, matrices in tree_instances.items():
+        mesh = None
+        mat = None
+        for t in treeTypes:
+            for o in t:
+                if (id(o.mesh), id(o.material)) == key:
+                    mesh, mat = o.mesh, o.material
+                    break
+            if mesh is not None:
+                break
+
+        if mesh is None:
             continue
-            #putRandomTree(treeTypes, x-(terrain_width/2)+random.randint(0, 10), z-(terrain_depth/2)+random.randint(0, 10))
 
-    for key, items in tree_instances.items():
-        mesh, mat, _ = items[0]
-        matrices = [M for (_, _, M) in items]
-        colors = [mesh.color] * len(matrices)
-        instanced_obj = InstancedMeshObject(mesh, mat, matrices, colors)
+        # If your InstancedMeshObject expects colors, you can still pass them
+        colors = [mesh.color] * len(matrices) if hasattr(mesh, "color") else None
+
+        if colors is None:
+            instanced_obj = InstancedMeshObject(mesh, mat, matrices)
+        else:
+            instanced_obj = InstancedMeshObject(mesh, mat, matrices, colors)
+
         glrenderer.addObject(instanced_obj)
-
 
     # -- FENCE --
     def buildFence(fence_start = glm.vec3(-40.0, 0.0, -40.0), fence_end   = glm.vec3( 40.0, 0.0, -40.0)):
