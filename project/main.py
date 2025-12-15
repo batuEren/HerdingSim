@@ -41,8 +41,13 @@ def main():
     camera.updateView()
 
     glrenderer = GLRenderer(glwindow, camera)
-    glEnable(GL_BLEND)
+    #glEnable(GL_BLEND)
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+
+    glEnable(GL_MULTISAMPLE)
+    glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE)
+    glDisable(GL_BLEND)  # usually best with A2C for cutout foliage
+    glDepthMask(GL_TRUE)  # keep writing depth so grass self-occludes nicely
 
     glrenderer.addLight(PointLight(glm.vec4(000.0, 5000.0, 3000.0, 1.0), glm.vec4(0.5, 0.5, 0.5, 1.0)))
 
@@ -77,7 +82,7 @@ def main():
     grass_color = glm.vec4(0.50 + 0.05 * colorRand, 0.45 + 0.05 * colorRand, 0.06 + 0.01 * colorRand, 1.0)
     grass_mesh = Grass(radius=0.45, height=0.9, color=grass_color)
     grass_texture = Texture(
-        file_path=os.path.join(TEXTURE_DIR, "grass6.png"),
+        file_path=os.path.join(TEXTURE_DIR, "grass9.png"),
         use_mipmaps=True,
         clamp_to_edge=True
     )

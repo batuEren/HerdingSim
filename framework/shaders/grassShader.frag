@@ -24,7 +24,7 @@ in vec2 frag_uv;
 
 #ifdef USE_ALBEDO_TEXTURE
 uniform sampler2D albedo_texture_sampler;
-uniform float alpha_cutoff = 0.65;
+uniform float alpha_cutoff = 0.35;
 #endif
 
 out vec4 out_color;
@@ -42,16 +42,13 @@ void main()
 #ifdef USE_ALBEDO_TEXTURE
     vec4 tex = texture(albedo_texture_sampler, scaled_uv);
 
-    // Kill fully transparent texels early (avoids mipmap fringe)
-    if (tex.a <= 0.001)
-        discard;
-
-    // Fix RGB fringe from transparent pixels (alpha bleed issue)
+    if (tex.a <= 0.001) discard;
     tex.rgb /= max(tex.a, 1e-4);
 
     alpha *= tex.a;
-    if (alpha < alpha_cutoff)
-        discard;
+
+    // With A2C, cutoff can be lower (lets MSAA handle edge smoothing)
+    if (alpha < alpha_cutoff) discard;
 
     base_color *= tex.rgb;
 #endif
