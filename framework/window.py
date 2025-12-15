@@ -25,6 +25,11 @@ class OpenGLWindow ():
             raise Exception("Failed to create GLFW window")
         
         glfw.make_context_current(self.window)
+
+        gl.glEnable(gl.GL_MULTISAMPLE)
+
+        print("MSAA samples:", gl.glGetIntegerv(gl.GL_SAMPLES))
+
         glfw.set_framebuffer_size_callback(self.window, self.framebuffer_size_callback)
         glfw.set_window_size_callback(self.window, self.window_size_callback)
         glfw.set_mouse_button_callback(self.window, self.mouse_button_callback)
@@ -41,6 +46,7 @@ class OpenGLWindow ():
         glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 3)
         glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
 
+        glfw.window_hint(glfw.SAMPLES, 8) # antialiasing
 
     def window_size_callback(self, window, width, height):
         gl.glViewport(0, 0, width, height)

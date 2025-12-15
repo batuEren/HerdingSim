@@ -43,7 +43,7 @@ def main():
     glEnable(GL_BLEND)
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
-    glrenderer.addLight(PointLight(glm.vec4(200.0, 200.0, 200.0, 1.0), glm.vec4(0.5, 0.5, 0.5, 1.0)))
+    glrenderer.addLight(PointLight(glm.vec4(000.0, 5000.0, 3000.0, 1.0), glm.vec4(0.5, 0.5, 0.5, 1.0)))
 
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     TEXTURE_DIR = os.path.join(BASE_DIR, "..", "textures")
@@ -76,7 +76,7 @@ def main():
     grass_color = glm.vec4(0.50 + 0.05 * colorRand, 0.45 + 0.05 * colorRand, 0.06 + 0.01 * colorRand, 1.0)
     grass_mesh = Grass(radius=0.45, height=0.9, color=grass_color)
     grass_texture = Texture(
-        file_path=os.path.join(TEXTURE_DIR, "grass2.png"),
+        file_path=os.path.join(TEXTURE_DIR, "grass6.png"),
         use_mipmaps=False,
         clamp_to_edge=True
     )
@@ -117,9 +117,9 @@ def main():
 
 
     x = 0
-    while(x<terrain_width/2):
+    while(x < terrain_width):
         z = 0
-        while(z<terrain_depth/2):
+        while(z < terrain_depth):
             if random.random() > density:
                 z += step
                 continue
@@ -189,8 +189,8 @@ def main():
 
     for x in range(0,terrain_width, 7):
         for z in range(0, terrain_depth, 7):
-            continue
-            #putRandomTree(treeTypes, x-(terrain_width/2)+random.randint(0, 10), z-(terrain_depth/2)+random.randint(0, 10))
+            #continue
+            putRandomTree(treeTypes, x-(terrain_width/2)+random.randint(0, 10), z-(terrain_depth/2)+random.randint(0, 10))
 
     for key, items in tree_instances.items():
         mesh, mat, _ = items[0]
