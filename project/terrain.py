@@ -15,8 +15,8 @@ def default_height_func(x, z):
 def random_height_func(x, z):
     #[TODO] create random values and store
     return (
-        2.7 * math.sin(0.10 * x) * math.cos(0.05 * z) +
-        2.3 * math.sin(0.05 * (x + z))
+        2.7 * math.sin(0.05 * x) * math.cos(0.025 * z) +
+        2.3 * math.sin(0.025 * (x + z))
     )
 
 

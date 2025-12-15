@@ -6,7 +6,7 @@ uniform vec4 light_position[10];
 uniform vec4 light_color[10];
 
 uniform float ambient_strength = 0.2;
-uniform float specular_strength = 0.5;
+uniform float specular_strength = 0.1;
 uniform float diffuse_strength = 1.0;
 uniform float shininess = 64.0;
 uniform vec2 texture_scale;

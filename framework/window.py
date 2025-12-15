@@ -41,6 +41,7 @@ class OpenGLWindow ():
         glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 3)
         glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
 
+
     def window_size_callback(self, window, width, height):
         gl.glViewport(0, 0, width, height)
         self.width = width

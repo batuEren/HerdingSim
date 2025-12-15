@@ -35,7 +35,7 @@ def main():
     width, height = 600, 600
     glwindow = OpenGLWindow(width, height)
 
-    camera = Flycamera(width, height, 70.0, 0.1, 200.0)
+    camera = Flycamera(width, height, 70.0, 0.1, 300.0)
     camera.position += glm.vec3(0.0, 6.0, 7.0)
     camera.updateView()
 
@@ -44,12 +44,6 @@ def main():
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
     glrenderer.addLight(PointLight(glm.vec4(200.0, 200.0, 200.0, 1.0), glm.vec4(0.5, 0.5, 0.5, 1.0)))
-
-    #floor_shape = Quad(width=100, height=100)
-    #floor_mat = Material(fragment_shader="grid.frag")
-    #floor_obj = MeshObject(floor_shape, floor_mat)
-    #floor_obj.transform = glm.rotate(glm.radians(-90), glm.vec3(1, 0, 0))
-    #glrenderer.addObject(floor_obj)
 
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     TEXTURE_DIR = os.path.join(BASE_DIR, "..", "textures")
@@ -60,7 +54,7 @@ def main():
     terrain_depth = 200
 
     colorRand = random.random()
-    ground_color=glm.vec4(0.45 + 0.4 * colorRand, 0.4 + 0.2 * colorRand, 0.15 + 0.05 * colorRand, 1.0)
+    ground_color = glm.vec4(0.50 + 0.05 * colorRand, 0.45 + 0.05 * colorRand, 0.06 + 0.01 * colorRand, 1.0)
 
     terrain_shape = Terrain(
         width=terrain_width,
@@ -79,10 +73,10 @@ def main():
 
     # -- GRASS --
 
-    grass_color = glm.vec4(0.15 + 0.4 * colorRand, 0.75 + 0.2 * colorRand, 0.15 + 0.05 * colorRand, 1.0)
+    grass_color = glm.vec4(0.50 + 0.05 * colorRand, 0.45 + 0.05 * colorRand, 0.06 + 0.01 * colorRand, 1.0)
     grass_mesh = Grass(radius=0.45, height=0.9, color=grass_color)
     grass_texture = Texture(
-        file_path=os.path.join(TEXTURE_DIR, "grass4.png"),
+        file_path=os.path.join(TEXTURE_DIR, "grass2.png"),
         use_mipmaps=False,
         clamp_to_edge=True
     )
@@ -90,17 +84,42 @@ def main():
 
     grass_obj = MeshObject(grass_mesh, grass_mat)
     grass_obj.transform = glm.translate(glm.vec3(1.0, 10, 1.0))
-    glrenderer.addObject(grass_obj)
+    glrenderer.addObject(grass_obj) #test obj
+
+    def terrain_normal(x, z, eps=0.2):
+        hL = random_height_func(x - eps, z)
+        hR = random_height_func(x + eps, z)
+        hD = random_height_func(x, z - eps)
+        hU = random_height_func(x, z + eps)
+
+        dhdx = (hR - hL) / (2.0 * eps)
+        dhdz = (hU - hD) / (2.0 * eps)
+
+        # normal points “up” from the slope
+        n = glm.vec3(-dhdx, 1.0, -dhdz)
+        return glm.normalize(n)
+
+    def align_up_to_normal(n):
+        up = glm.vec3(0, 1, 0)
+
+        # if nearly flat, no tilt needed
+        if abs(glm.dot(up, n)) > 0.9999:
+            return glm.mat4(1.0)
+
+        axis = glm.normalize(glm.cross(up, n))
+        angle = glm.acos(glm.clamp(glm.dot(up, n), -1.0, 1.0))
+        return glm.rotate(glm.mat4(1.0), angle, axis)
 
     transforms = []
-    step = 0.5
+    step = 0.3
     jitter = 0.5
     density = 0.95
 
+
     x = 0
-    while(x<terrain_width):
+    while(x<terrain_width/2):
         z = 0
-        while(z<terrain_depth):
+        while(z<terrain_depth/2):
             if random.random() > density:
                 z += step
                 continue
@@ -112,13 +131,19 @@ def main():
             yaw = random.random() * 6.28318530718
             s = 0.7 + random.random() * 0.7
 
-            T = glm.translate(glm.mat4(1.0), glm.vec3(wx, wy, wz))
-            R = glm.rotate(glm.mat4(1.0), yaw, glm.vec3(0, 1, 0))
-            S = glm.scale(glm.mat4(1.0), glm.vec3(s, 1.0, s))
+            n = terrain_normal(wx, wz)
 
-            transforms.append(T * R * S)
-            z+=step
-        x+=step
+            T = glm.translate(glm.vec3(wx, wy, wz))
+
+            Rtilt = align_up_to_normal(n)
+            Ryaw = glm.rotate(glm.mat4(1.0), yaw, n)  # yaw around ground normal
+
+            S = glm.scale(glm.vec3(s, 1.0, s))
+
+            transforms.append(T * Rtilt * Ryaw * S)
+
+            z += step
+        x += step
 
 
     grass_colors = [grass_mesh.color] * len(transforms)
@@ -164,8 +189,8 @@ def main():
 
     for x in range(0,terrain_width, 7):
         for z in range(0, terrain_depth, 7):
-            #continue
-            putRandomTree(treeTypes, x-(terrain_width/2)+random.randint(0, 10), z-(terrain_depth/2)+random.randint(0, 10))
+            continue
+            #putRandomTree(treeTypes, x-(terrain_width/2)+random.randint(0, 10), z-(terrain_depth/2)+random.randint(0, 10))
 
     for key, items in tree_instances.items():
         mesh, mat, _ = items[0]
