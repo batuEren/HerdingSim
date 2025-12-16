@@ -60,7 +60,9 @@ def main():
     terrain_depth = 200
 
     colorRand = random.random()
-    ground_color = glm.vec4(0.50 + 0.05 * colorRand, 0.45 + 0.05 * colorRand, 0.06 + 0.01 * colorRand, 1.0)
+    #leaf_color = glm.vec4(0.95, 0.40, 0.02, 1.0)
+    #ground_color = glm.vec4(0.85, 0.45, 0.1, 1.0)
+    ground_color = glm.vec4(0.5, 0.5, 0.2, 1.0)
 
     terrain_shape = Terrain(
         width=terrain_width,
@@ -79,7 +81,8 @@ def main():
 
     # -- GRASS --
 
-    grass_color = glm.vec4(0.50 + 0.05 * colorRand, 0.45 + 0.05 * colorRand, 0.06 + 0.01 * colorRand, 1.0)
+    #grass_color = glm.vec4(0.85, 0.45, 0.1, 1.0) # nice orange
+    grass_color = glm.vec4(0.5, 0.5, 0.2, 1.0)
     grass_mesh = Grass(radius=0.45, height=0.9, color=grass_color)
     grass_texture = Texture(
         file_path=os.path.join(TEXTURE_DIR, "grass9.png"),
@@ -210,7 +213,7 @@ def main():
                 tree_instances[key].append(obj_world)
 
     # --- place many trees ---
-    step = 20
+    step = 16
     for x in range(0, terrain_width, step):
         for z in range(0, terrain_depth, step):
             putRandomTree(

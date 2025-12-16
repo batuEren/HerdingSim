@@ -4,10 +4,14 @@ import glm
 import numpy as np
 from .shaders import createShader
 import time
+import glfw
 from . import Texture
 
 class Material:
-    def __init__(self, vertex_shader="shader.vert", fragment_shader="shader.frag", color_texture=None):
+    def __init__(self, vertex_shader="shader.vert", fragment_shader="shader.frag", color_texture=None,
+        specular_strength = 0.5,
+        diffuse_strength = 1.0,
+        shininess = 32.0):
         filedir = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', 'shaders')
 
         defines_list = []
@@ -27,9 +31,9 @@ class Material:
             defines=defines_list + ["INSTANCED"]
         )
         self.ambient_strength  = 0.2
-        self.specular_strength = 0.5
-        self.diffuse_strength = 1.0
-        self.shininess         = 32.0
+        self.specular_strength = specular_strength
+        self.diffuse_strength = diffuse_strength
+        self.shininess         = shininess
         self.texture_scale = glm.vec2(1.0)
 
     def get_shader_program(self, is_instanced):
@@ -82,6 +86,10 @@ class Material:
         loc_specular    = gl.glGetUniformLocation(program, "specular_strength")
         loc_diffuse     = gl.glGetUniformLocation(program, "diffuse_strength")
         loc_shiny       = gl.glGetUniformLocation(program, "shininess")
+
+        loc_time = gl.glGetUniformLocation(program, "uTime")
+        if loc_time != -1:
+            gl.glUniform1f(loc_time, glfw.get_time())
 
         gl.glUniform1f(loc_ambient,     self.ambient_strength)
         gl.glUniform1f(loc_specular,    self.specular_strength)

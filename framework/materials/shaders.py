@@ -6,7 +6,8 @@ def readShaderFile (filename):
     """
     Reads one shader file into a string
     """
-    data = open(filename, 'r').read()
+    with open(filename, "r", encoding="utf-8") as f:
+        data = f.read()
     return data
 
 def createShader(vtx_filename, frag_filename, defines=None):

@@ -51,7 +51,7 @@ def main():
 
     # -- TREE STUFF --
 
-    objs = tree2.build_tree_instanced(foliage_cards=850)
+    objs = tree2.build_tree_instanced2(height = 12.0, width=3.0, foliage_cards=850)
     for o in objs:
         glrenderer.addObject(o)
 
