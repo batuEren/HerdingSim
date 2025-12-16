@@ -18,15 +18,20 @@ def foliage_transforms_pine(
     base_radius: float,
     count: int = 120,
     tilt_deg: float = 25.0,
+    upward_tilt_deg: float = 6.0,   # subtle upward bias
     min_scale: float = 0.7,
     max_scale: float = 1.25,
-    bottom_boost: float = 0.35,     # fraction of cards reserved for a dense bottom “skirt”
-    bottom_band: float = 0.28,      # bottom skirt height as fraction of foliage_height
-    shell_prob: float = 0.75,       # how many cards prefer the outer shell (silhouette)
+    bottom_boost: float = 0.35,
+    bottom_band: float = 0.28,
+    shell_prob: float = 0.75,
 ):
     """
     Returns a list of glm.mat4 instance transforms for pine foliage cards.
+    Cards mostly face outward, tilt slightly upward, and vary organically.
     """
+    import math, random
+    import glm
+
     T = []
 
     # clamp params
@@ -34,26 +39,30 @@ def foliage_transforms_pine(
     bottom_band  = max(0.05, min(0.8, bottom_band))
     shell_prob   = max(0.0, min(1.0, shell_prob))
 
-    n_main = int(count * (1.0 - bottom_boost))
+    n_main   = int(count * (1.0 - bottom_boost))
     n_bottom = count - n_main
 
-    def make_one(y: float, rr: float, r_here: float):
+    def make_one(y: float, rr: float):
         ang = random.random() * 2.0 * math.pi
         x = rr * math.cos(ang)
         z = rr * math.sin(ang)
 
-        # orientation: mostly random around Y, plus a small tilt
-        yaw = random.random() * 360.0
-        tiltX = (random.random() * 2.0 - 1.0) * tilt_deg
-        tiltZ = (random.random() * 2.0 - 1.0) * tilt_deg
-
-        # reduce tilt near bottom so the skirt doesn’t look “spiky”
-        if foliage_height > 1e-6:
-            tilt_factor = 0.30 + 0.70 * (y / foliage_height)  # 0.30 at bottom -> 1.0 at top
+        # --- yaw: face outward radially ---
+        if rr > 1e-6:
+            yaw = math.degrees(math.atan2(x, z))
+            yaw += random.uniform(-9.0, 9.0)  # small jitter
         else:
-            tilt_factor = 1.0
-        tiltX *= tilt_factor
-        tiltZ *= tilt_factor
+            yaw = random.random() * 360.0
+
+        # --- tilt ---
+        height_factor = y / max(1e-6, foliage_height)
+
+        # base upward pitch (negative X = tilt back)
+        tiltX = -upward_tilt_deg * (0.6 + 0.4 * height_factor)
+
+        # add organic variation
+        tiltX += (random.random() * 2.0 - 1.0) * tilt_deg * 0.5
+        tiltZ  = (random.random() * 2.0 - 1.0) * tilt_deg * 0.5
 
         s = min_scale + (max_scale - min_scale) * random.random()
 
@@ -65,37 +74,37 @@ def foliage_transforms_pine(
         M = glm.scale(M, glm.vec3(s, s, s))
         return M
 
-    # --- main pass: mild bottom bias + mostly shell bias ---
+    # --- main foliage ---
     for _ in range(n_main):
         t = random.random()
-        y = (t ** 0.45) * foliage_height  # stronger bottom bias than your old 0.65
+        y = (t ** 0.45) * foliage_height
 
-        # cone radius shrinks with height
-        r_here = base_radius * (1.0 - (y / max(1e-6, foliage_height)))
+        r_here = base_radius * (1.0 - y / max(1e-6, foliage_height))
         r_here = max(0.0, r_here)
 
         u = random.random()
         if random.random() < shell_prob:
-            rr = (u ** 0.25) * r_here      # push outward (silhouette)
+            rr = (u ** 0.25) * r_here   # silhouette bias
         else:
-            rr = math.sqrt(u) * r_here     # some interior fill
+            rr = math.sqrt(u) * r_here  # interior fill
 
-        T.append(make_one(y, rr, r_here))
+        T.append(make_one(y, rr))
 
-    # --- bottom skirt pass: very low + very outer ---
+    # --- bottom skirt ---
     for _ in range(n_bottom):
         t = random.random()
-        y = (t ** 0.9) * (foliage_height * bottom_band)  # concentrate near bottom band
+        y = (t ** 0.9) * (foliage_height * bottom_band)
 
-        r_here = base_radius * (1.0 - (y / max(1e-6, foliage_height)))
+        r_here = base_radius * (1.0 - y / max(1e-6, foliage_height))
         r_here = max(0.0, r_here)
 
         u = random.random()
-        rr = (u ** 0.12) * r_here         # very outer-heavy
+        rr = (u ** 0.12) * r_here
 
-        T.append(make_one(y, rr, r_here))
+        T.append(make_one(y, rr))
 
     return T
+
 
 
 def foliage_transforms_witness(
@@ -246,7 +255,7 @@ def build_tree_instanced(height=6.0, width=2.0, foliage_cards=750):
         clamp_to_edge=True
     )
 
-    log_mat = Material(color_texture=log_texture)
+    log_mat = Material(color_texture=log_texture, specular_strength=0.0)
     log_transform = glm.translate(glm.vec3(0.0, trunk_height * 0.5, 0.0))
     objs.append(MeshObject(log_mesh, log_mat, transform=log_transform))
 
@@ -265,7 +274,8 @@ def build_tree_instanced(height=6.0, width=2.0, foliage_cards=750):
     )
     leaf_color = glm.vec4(0.95, 0.40, 0.02, 1.0)
 
-    foliage_mat = Material(color_texture=leaf_texture, fragment_shader="leafShader.frag", vertex_shader= "leafShader.vert")  # placeholder if you haven't wired texture/shaders yet
+    foliage_mat = Material(color_texture=leaf_texture, fragment_shader="leafShader.frag", vertex_shader= "leafShader.vert",
+                           ambient_strength = 0.4, )  # placeholder if you haven't wired texture/shaders yet
 
     foliage_mesh = FoliageCard(
         color=leaf_color,

@@ -9,6 +9,7 @@ from . import Texture
 
 class Material:
     def __init__(self, vertex_shader="shader.vert", fragment_shader="shader.frag", color_texture=None,
+        ambient_strength=0.2,
         specular_strength = 0.5,
         diffuse_strength = 1.0,
         shininess = 32.0):
@@ -30,7 +31,7 @@ class Material:
             os.path.join(filedir, fragment_shader),
             defines=defines_list + ["INSTANCED"]
         )
-        self.ambient_strength  = 0.2
+        self.ambient_strength  = ambient_strength
         self.specular_strength = specular_strength
         self.diffuse_strength = diffuse_strength
         self.shininess         = shininess

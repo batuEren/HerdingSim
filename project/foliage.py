@@ -31,7 +31,7 @@ class FoliageCard(Shape):
         ]
 
         # cheap foliage lighting: “up” normals like your grass
-        UP = glm.vec3(0.0, 1.0, 0.0)
+        UP = glm.vec3(0.0, 0.0, 1.0)
         norms = [UP, UP, UP, UP]
         cols  = [self.color] * 4
 
