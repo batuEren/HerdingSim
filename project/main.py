@@ -80,11 +80,7 @@ def main():
 
     glrenderer.addObject(terrain_obj)
 
-    # -- SHEEP --
-
-    sheeps = []
-    s = Sheep(glrenderer, random_height_func)
-    sheeps.append(s)
+    tree_positions = []
 
     # -- GRASS --
 
@@ -197,6 +193,7 @@ def main():
         template_objs = treeTypes[rand]
 
         base_y = random_height_func(x, z)
+        tree_positions.append(glm.vec3(x, base_y, z))
         tree_translation = glm.translate(glm.mat4(1.0), glm.vec3(x, base_y, z))
 
         for o in template_objs:
@@ -254,6 +251,13 @@ def main():
 
         glrenderer.addObject(instanced_obj)
 
+    # -- SHEEP --
+
+    sheeps = []
+    for x in range(0, 40):
+        s = Sheep(glrenderer, random_height_func, obstacles=tree_positions)
+        sheeps.append(s)
+
     # -- FENCE --
     def buildFence(fence_start = glm.vec3(-40.0, 0.0, -40.0), fence_end   = glm.vec3( 40.0, 0.0, -40.0)):
         fence_objs = build_fence(
@@ -268,10 +272,10 @@ def main():
 
     rad = 15
 
-    buildFence(glm.vec3(-rad, 0.0, -rad), glm.vec3(rad, 0.0, -rad))
-    buildFence(glm.vec3(rad, 0.0, -rad), glm.vec3(rad, 0.0, rad))
-    buildFence(glm.vec3(rad, 0.0, rad), glm.vec3(-rad, 0.0, rad))
-    buildFence(glm.vec3(-rad, 0.0, rad), glm.vec3(-rad, 0.0, -rad))
+    #buildFence(glm.vec3(-rad, 0.0, -rad), glm.vec3(rad, 0.0, -rad))
+    #buildFence(glm.vec3(rad, 0.0, -rad), glm.vec3(rad, 0.0, rad))
+    #buildFence(glm.vec3(rad, 0.0, rad), glm.vec3(-rad, 0.0, rad))
+    #buildFence(glm.vec3(-rad, 0.0, rad), glm.vec3(-rad, 0.0, -rad))
 
     # -- SKYBOX --
     faces = [

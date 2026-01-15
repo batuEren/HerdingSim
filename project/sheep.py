@@ -13,7 +13,7 @@ import numpy as np
 import random
 
 class Sheep:
-    def __init__(self, renderer, height_func, color=glm.vec4(1.0, 1.0, 1.0, 1.0)):
+    def __init__(self, renderer, height_func, color=glm.vec4(1.0, 1.0, 1.0, 1.0), obstacles=None):
         self.frames = 0
         self.walker_position = glm.vec3(0.0)
         self.walker_direction = glm.vec3(1.0, 0.0, 0.0)
@@ -21,6 +21,9 @@ class Sheep:
         self.walk_speed = 4.0
         self.height_func = height_func
         self.color = color
+        self.obstacles = obstacles if obstacles is not None else []
+        self.obstacle_avoid_radius = 6.0
+        self.obstacle_avoid_strength = 4.0
 
         # Body - To Do - Cube for now
         self.body_scale = glm.vec3(2.0, 2.0, 2.0)
@@ -29,6 +32,17 @@ class Sheep:
         self.body  = MeshObject(body_shape, body_mat)
         renderer.addObject(self.body)
 
+    def _avoid_obstacles(self):
+        steer = glm.vec3(0.0)
+        for o in self.obstacles:
+            offset = self.walker_position - o
+            offset.y = 0.0
+            dist = glm.length(offset)
+            if dist < 0.0001 or dist > self.obstacle_avoid_radius:
+                continue
+            strength = 1.0 - (dist / self.obstacle_avoid_radius)
+            steer += glm.normalize(offset) * strength
+        return steer
 
     def move_walker(self, delta_time):
         # compute the probability of the character changing directions this frame,
@@ -41,6 +55,12 @@ class Sheep:
             self.walker_direction = glm.vec3(rot * glm.vec4(self.walker_direction, 1.0))
 
             #self.walker_direction = glm.vec3(0.0, 0.0, 0.0)
+
+        avoid = self._avoid_obstacles()
+        if glm.length(avoid) > 0.0001:
+            desired = self.walker_direction + (avoid * self.obstacle_avoid_strength)
+            if glm.length(desired) > 0.0001:
+                self.walker_direction = glm.normalize(desired)
 
         # update the character's position. We multiply by delta time to make sure it moves "walk_speed" units forward per second, regardless of framerate.
         self.walker_position += self.walker_direction * self.walk_speed * delta_time
