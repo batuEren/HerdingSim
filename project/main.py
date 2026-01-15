@@ -254,8 +254,15 @@ def main():
     # -- SHEEP --
 
     sheeps = []
-    for x in range(0, 40):
-        s = Sheep(glrenderer, random_height_func, obstacles=tree_positions)
+    for _ in range(40):
+        s = Sheep(glrenderer, random_height_func, obstacles=tree_positions, flock=sheeps)
+        s.walker_position = glm.vec3(
+            random.uniform(-8.0, 8.0),
+            0.0,
+            random.uniform(-8.0, 8.0),
+        )
+        s.walker_position.y = random_height_func(s.walker_position.x, s.walker_position.z)
+        s.update_walker_geometry()
         sheeps.append(s)
 
     # -- FENCE --
