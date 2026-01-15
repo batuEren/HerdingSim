@@ -26,6 +26,7 @@ from fence import *
 from grass import *
 from terrain import *
 from skybox import *
+from sheep import *
 from collections import defaultdict
 from OpenGL.GL import *
 
@@ -78,6 +79,12 @@ def main():
     terrain_obj.transform = glm.mat4(1.0)
 
     glrenderer.addObject(terrain_obj)
+
+    # -- SHEEP --
+
+    sheeps = []
+    s = Sheep(glrenderer, random_height_func)
+    sheeps.append(s)
 
     # -- GRASS --
 
@@ -281,7 +288,15 @@ def main():
 
     glrenderer.setSkybox(skybox)
 
+    previous_time = glfw.get_time()
     while not glfw.window_should_close(glwindow.window):
+        current_time = glfw.get_time()
+        delta_time = current_time - previous_time
+        previous_time = current_time
+
+        for s in sheeps:
+            s.animate(delta_time)
+
         glrenderer.render()
 
     glrenderer.delete()

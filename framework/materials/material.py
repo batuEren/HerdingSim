@@ -57,7 +57,7 @@ class Material:
         loc = gl.glGetUniformLocation(program, "uTime")
         if loc != -1:
             gl.glUniform1f(loc, float(t))
-            print("set_uniforms", t)
+            #print("set_uniforms", t)
 
         # Common uniforms
         loc_view = gl.glGetUniformLocation(program, "view")
