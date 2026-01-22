@@ -13,17 +13,23 @@ import numpy as np
 import random
 
 class Sheep:
-    def __init__(self, renderer, height_func, color=glm.vec4(1.0, 1.0, 1.0, 1.0), obstacles=None, flock=None):
+    def __init__(self, renderer, height_func, color=glm.vec4(1.0, 1.0, 1.0, 1.0), obstacles=None, flock=None, predators=None):
         self.frames = 0
         self.walker_position = glm.vec3(0.0)
         self.walker_direction = glm.vec3(1.0, 0.0, 0.0)
         self.change_direction_probability = 0.35
         self.walk_speed = 2.0
+        self.flee_speed_boost = 2.0
+        self.separation_speed_boost = 0.8
+        self.separation_speed_radius = 1.5
         self.height_func = height_func
         self.color = color
         self.obstacles = obstacles if obstacles is not None else []
         self.obstacle_avoid_radius = 6.0
         self.obstacle_avoid_strength = 4.0
+        self.predators = predators if predators is not None else []
+        self.predator_avoid_radius = 18.0
+        self.predator_avoid_strength = 8.0
         self.flock = flock if flock is not None else []
         self.neighbor_radius = 10.0
         self.separation_radius = 4.0
@@ -88,6 +94,60 @@ class Sheep:
 
         steer = (cohesion * self.cohesion_weight) + (avg_dir * self.alignment_weight) + (separation * self.separation_weight)
         return steer
+    
+    def _avoid_predators(self):
+        steer = glm.vec3(0.0)
+        for p in self.predators:
+            offset = self.walker_position - p.walker_position
+            offset.y = 0.0
+            dist = glm.length(offset)
+            if dist < 0.0001 or dist > self.predator_avoid_radius:
+                continue
+            strength = 1.0 - (dist / self.predator_avoid_radius)
+            steer += glm.normalize(offset) * strength
+        return steer
+    
+    def _predator_speed_multiplier(self):
+        if not self.predators:
+            return 1.0
+
+        closest = None
+        for p in self.predators:
+            offset = p.walker_position - self.walker_position
+            offset.y = 0.0
+            dist = glm.length(offset)
+            if dist < 0.0001:
+                continue
+            if closest is None or dist < closest:
+                closest = dist
+
+        if closest is None or closest > self.predator_avoid_radius:
+            return 1.0
+
+        t = 1.0 - (closest / self.predator_avoid_radius)
+        return 1.0 + (t * self.flee_speed_boost)
+    
+    def _separation_speed_multiplier(self):
+        if not self.flock:
+            return 1.0
+
+        closest = None
+        for other in self.flock:
+            if other is self:
+                continue
+            offset = other.walker_position - self.walker_position
+            offset.y = 0.0
+            dist = glm.length(offset)
+            if dist < 0.0001:
+                continue
+            if closest is None or dist < closest:
+                closest = dist
+
+        if closest is None or closest > self.separation_speed_radius:
+            return 1.0
+
+        t = 1.0 - (closest / self.separation_speed_radius)
+        return 1.0 + (t * self.separation_speed_boost)
 
     def move_walker(self, delta_time):
         # compute the probability of the character changing directions this frame,
@@ -103,7 +163,8 @@ class Sheep:
 
         avoid = self._avoid_obstacles()
         flock = self._flock()
-        combined = (avoid * self.obstacle_avoid_strength) + flock
+        predators = self._avoid_predators()
+        combined = (avoid * self.obstacle_avoid_strength) + (predators * self.predator_avoid_strength) + flock
 
         if glm.length(combined) > 0.0001:
             desired = self.walker_direction + combined
@@ -111,7 +172,8 @@ class Sheep:
                 self.walker_direction = glm.normalize(desired)
 
         # update the character's position. We multiply by delta time to make sure it moves "walk_speed" units forward per second, regardless of framerate.
-        self.walker_position += self.walker_direction * self.walk_speed * delta_time
+        speed = self.walk_speed * self._predator_speed_multiplier() * self._separation_speed_multiplier()
+        self.walker_position += self.walker_direction * speed * delta_time
         self.walker_position.y = self.height_func(self.walker_position.x, self.walker_position.z)
         #print("walked by: " + str(self.walk_speed * delta_time))
         self.update_walker_geometry()

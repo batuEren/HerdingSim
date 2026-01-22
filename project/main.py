@@ -27,6 +27,7 @@ from grass import *
 from terrain import *
 from skybox import *
 from sheep import *
+from wolf import *
 from collections import defaultdict
 from OpenGL.GL import *
 
@@ -254,8 +255,9 @@ def main():
     # -- SHEEP --
 
     sheeps = []
+    wolves = []
     for _ in range(40):
-        s = Sheep(glrenderer, random_height_func, obstacles=tree_positions, flock=sheeps)
+        s = Sheep(glrenderer, random_height_func, obstacles=tree_positions, flock=sheeps, predators=wolves)
         s.walker_position = glm.vec3(
             random.uniform(-8.0, 8.0),
             0.0,
@@ -264,6 +266,19 @@ def main():
         s.walker_position.y = random_height_func(s.walker_position.x, s.walker_position.z)
         s.update_walker_geometry()
         sheeps.append(s)
+
+    # -- WOLF --
+
+    for _ in range(3):
+        w = Wolf(glrenderer, random_height_func, obstacles=tree_positions, flock=wolves, prey=sheeps)
+        w.walker_position = glm.vec3(
+            random.uniform(-20.0, 20.0),
+            0.0,
+            random.uniform(-20.0, 20.0),
+        )
+        w.walker_position.y = random_height_func(w.walker_position.x, w.walker_position.z)
+        w.update_walker_geometry()
+        wolves.append(w)
 
     # -- FENCE --
     def buildFence(fence_start = glm.vec3(-40.0, 0.0, -40.0), fence_end   = glm.vec3( 40.0, 0.0, -40.0)):
@@ -307,6 +322,8 @@ def main():
 
         for s in sheeps:
             s.animate(delta_time)
+        for w in wolves:
+            w.animate(delta_time)
 
         glrenderer.render()
 
