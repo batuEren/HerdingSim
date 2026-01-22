@@ -76,3 +76,23 @@ class Shape:
         if self.ColorBO:  gl.glDeleteBuffers(1, [self.ColorBO])
         if self.UVBO:     gl.glDeleteBuffers(1, [self.UVBO])
         if self.IndexBO:  gl.glDeleteBuffers(1, [self.IndexBO])
+
+    def update_colors(self, colors):
+        self.colors = np.array(colors, dtype=np.float32)
+
+        if self.VAO is None:
+            self.createBuffers()
+            return
+
+        if self.ColorBO is None:
+            gl.glBindVertexArray(self.VAO)
+            self.ColorBO = gl.glGenBuffers(1)
+            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.ColorBO)
+            gl.glBufferData(gl.GL_ARRAY_BUFFER, self.colors.nbytes, self.colors, gl.GL_STATIC_DRAW)
+            gl.glEnableVertexAttribArray(2)
+            gl.glVertexAttribPointer(2, 4, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+            gl.glBindVertexArray(0)
+            return
+
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.ColorBO)
+        gl.glBufferSubData(gl.GL_ARRAY_BUFFER, 0, self.colors.nbytes, self.colors)

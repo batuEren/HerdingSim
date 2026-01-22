@@ -12,6 +12,7 @@
 """
 import random
 import sys, os
+import numpy as np
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from framework.camera import *
 from framework.renderer import *
@@ -31,10 +32,63 @@ from wolf import *
 from collections import defaultdict
 from OpenGL.GL import *
 
+SEASON = 1.0  # -1.0 = fall (orange), 0.0 = winter (white), 1.0 = spring (green)
+
+
+def _lerp_color(a, b, t):
+    return a * (1.0 - t) + b * t
+
+
+def _season_palette(season):
+    s = glm.clamp(season, -1.0, 1.0)
+
+    fall_ground = glm.vec4(0.5, 0.5, 0.2, 1.0)
+    winter_ground = glm.vec4(0.95, 0.95, 0.95, 1.0)
+    spring_ground = glm.vec4(0.32, 0.55, 0.26, 1.0)
+
+    fall_grass = glm.vec4(0.5, 0.5, 0.2, 1.0)
+    winter_grass = glm.vec4(0.92, 0.92, 0.92, 1.0)
+    spring_grass = glm.vec4(0.30, 0.65, 0.28, 1.0)
+
+    fall_leaves = glm.vec4(0.95, 0.40, 0.02, 1.0)
+    winter_leaves = glm.vec4(0.92, 0.92, 0.92, 1.0)
+    spring_leaves = glm.vec4(0.32, 0.60, 0.28, 1.0)
+
+    if s <= 0.0:
+        t = s + 1.0
+        ground = _lerp_color(fall_ground, winter_ground, t)
+        grass = _lerp_color(fall_grass, winter_grass, t)
+        leaves = _lerp_color(fall_leaves, winter_leaves, t)
+    else:
+        t = s
+        ground = _lerp_color(winter_ground, spring_ground, t)
+        grass = _lerp_color(winter_grass, spring_grass, t)
+        leaves = _lerp_color(winter_leaves, spring_leaves, t)
+
+    return ground, grass, leaves
+
+
+def _set_mesh_color(mesh, color):
+    if mesh.vertices.size == 0 or mesh.colors.size == 0:
+        mesh.createGeometry()
+
+    c = color.to_list() if hasattr(color, "to_list") else color
+    arr = np.tile(np.array(c, dtype=np.float32), (mesh.colors.shape[0], 1))
+    mesh.update_colors(arr)
+
+
+def _apply_season_to_env(season, terrain_mesh, grass_mesh, foliage_meshes):
+    ground, grass, leaves = _season_palette(season)
+    _set_mesh_color(terrain_mesh, ground)
+    _set_mesh_color(grass_mesh, grass)
+    for mesh in foliage_meshes:
+        _set_mesh_color(mesh, leaves)
+
 
 
 
 def main():
+    global SEASON
     width, height = 600, 600
     glwindow = OpenGLWindow(width, height)
 
@@ -61,10 +115,7 @@ def main():
     terrain_width = 200
     terrain_depth = 200
 
-    colorRand = random.random()
-    #leaf_color = glm.vec4(0.95, 0.40, 0.02, 1.0)
-    #ground_color = glm.vec4(0.85, 0.45, 0.1, 1.0)
-    ground_color = glm.vec4(0.5, 0.5, 0.2, 1.0)
+    ground_color, grass_color, leaf_color = _season_palette(SEASON)
 
     terrain_shape = Terrain(
         width=terrain_width,
@@ -85,8 +136,6 @@ def main():
 
     # -- GRASS --
 
-    #grass_color = glm.vec4(0.85, 0.45, 0.1, 1.0) # nice orange
-    grass_color = glm.vec4(0.5, 0.5, 0.2, 1.0)
     grass_mesh = Grass(radius=0.45, height=0.9, color=grass_color)
     grass_texture = Texture(
         file_path=os.path.join(TEXTURE_DIR, "grass9.png"),
@@ -167,6 +216,8 @@ def main():
 
     # -- TREE --
 
+    foliage_meshes = []
+
     def createRandomTrees(amount):
         treeTypes = []
         for i in range(amount):
@@ -175,8 +226,12 @@ def main():
             objs = tree2.build_tree_instanced(
                 8 + 16.0 * size,
                 2 + 4.0 * size,
-                foliage_cards=1500+(int)(size*2000)
+                foliage_cards=1500+(int)(size*2000),
+                leaf_color=leaf_color
             )
+            for o in objs:
+                if isinstance(o, InstancedMeshObject):
+                    foliage_meshes.append(o.mesh)
             treeTypes.append(objs)
         return treeTypes
 
@@ -315,10 +370,25 @@ def main():
     glrenderer.setSkybox(skybox)
 
     previous_time = glfw.get_time()
+    last_season = SEASON
+    season_rate = 0.6
     while not glfw.window_should_close(glwindow.window):
         current_time = glfw.get_time()
         delta_time = current_time - previous_time
         previous_time = current_time
+
+        delta = 0.0
+        if glfw.get_key(glwindow.window, glfw.KEY_1) == glfw.PRESS:
+            delta -= season_rate * delta_time
+        if glfw.get_key(glwindow.window, glfw.KEY_2) == glfw.PRESS:
+            delta += season_rate * delta_time
+
+        if delta != 0.0:
+            SEASON = glm.clamp(SEASON + delta, -1.0, 1.0)
+
+        if abs(SEASON - last_season) > 1e-4:
+            _apply_season_to_env(SEASON, terrain_shape, grass_mesh, foliage_meshes)
+            last_season = SEASON
 
         for s in sheeps:
             s.animate(delta_time)

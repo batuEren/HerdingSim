@@ -236,7 +236,7 @@ import os
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TEXTURE_DIR = os.path.join(BASE_DIR, "..", "textures")
 
-def build_tree_instanced(height=6.0, width=2.0, foliage_cards=750):
+def build_tree_instanced(height=6.0, width=2.0, foliage_cards=750, leaf_color=None):
     objs = []
 
     trunk_height   = height*0.5
@@ -272,7 +272,8 @@ def build_tree_instanced(height=6.0, width=2.0, foliage_cards=750):
         use_mipmaps=True,
         clamp_to_edge=True
     )
-    leaf_color = glm.vec4(0.95, 0.40, 0.02, 1.0)
+    if leaf_color is None:
+        leaf_color = glm.vec4(0.95, 0.40, 0.02, 1.0)
 
     foliage_mat = Material(color_texture=leaf_texture, fragment_shader="leafShader.frag", vertex_shader= "leafShader.vert",
                            ambient_strength = 0.4, )  # placeholder if you haven't wired texture/shaders yet
@@ -297,7 +298,7 @@ def build_tree_instanced(height=6.0, width=2.0, foliage_cards=750):
     return objs
 
 
-def build_tree_instanced2(height=6.0, width=2.0, foliage_cards=750):
+def build_tree_instanced2(height=6.0, width=2.0, foliage_cards=750, leaf_color=None):
     objs = []
 
     trunk_height   = height*0.5
@@ -333,7 +334,8 @@ def build_tree_instanced2(height=6.0, width=2.0, foliage_cards=750):
         use_mipmaps=True,
         clamp_to_edge=True
     )
-    leaf_color = glm.vec4(0.95, 0.40, 0.02, 1.0)
+    if leaf_color is None:
+        leaf_color = glm.vec4(0.95, 0.40, 0.02, 1.0)
 
     foliage_mat = Material(color_texture=leaf_texture, fragment_shader="leafShader.frag", vertex_shader= "leafShader.vert")  # placeholder if you haven't wired texture/shaders yet
 
