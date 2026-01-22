@@ -12,7 +12,8 @@ class Material:
         ambient_strength=0.2,
         specular_strength = 0.5,
         diffuse_strength = 1.0,
-        shininess = 32.0):
+        shininess = 32.0,
+        blend=False):
         filedir = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', 'shaders')
 
         defines_list = []
@@ -36,6 +37,7 @@ class Material:
         self.diffuse_strength = diffuse_strength
         self.shininess         = shininess
         self.texture_scale = glm.vec2(1.0)
+        self.blend = blend
 
     def get_shader_program(self, is_instanced):
         if is_instanced:

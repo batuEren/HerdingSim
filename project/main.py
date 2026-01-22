@@ -102,8 +102,8 @@ def main():
 
     glEnable(GL_MULTISAMPLE)
     glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE)
-    glDisable(GL_BLEND)  # usually best with A2C for cutout foliage
-    glDepthMask(GL_TRUE)  # keep writing depth so grass self-occludes nicely
+    glDisable(GL_BLEND)
+    glDepthMask(GL_TRUE)
 
     glrenderer.addLight(PointLight(glm.vec4(000.0, 5000.0, 3000.0, 1.0), glm.vec4(0.5, 0.5, 0.5, 1.0)))
 
@@ -217,6 +217,7 @@ def main():
     # -- TREE --
 
     foliage_meshes = []
+    shadow_transforms = []
 
     def createRandomTrees(amount):
         treeTypes = []
@@ -232,7 +233,12 @@ def main():
             for o in objs:
                 if isinstance(o, InstancedMeshObject):
                     foliage_meshes.append(o.mesh)
-            treeTypes.append(objs)
+            width = 2 + 4.0 * size
+            shadow_scale = width * 3.0
+            treeTypes.append({
+                "objs": objs,
+                "shadow_scale": shadow_scale,
+            })
         return treeTypes
 
     treeTypes = createRandomTrees(5)
@@ -246,11 +252,24 @@ def main():
 
     def putRandomTree(treeTypes, x, z):
         rand = random.randrange(len(treeTypes))
-        template_objs = treeTypes[rand]
+        template = treeTypes[rand]
+        template_objs = template["objs"]
 
         base_y = random_height_func(x, z)
         tree_positions.append(glm.vec3(x, base_y, z))
         tree_translation = glm.translate(glm.mat4(1.0), glm.vec3(x, base_y, z))
+
+        n = terrain_normal(x, z)
+        Rtilt = align_up_to_normal(n)
+        Rplane = glm.rotate(glm.mat4(1.0), glm.radians(90.0), glm.vec3(1.0, 0.0, 0.0))
+        shadow_scale = template["shadow_scale"]
+        shadow_y = base_y + 0.92
+        shadow_transforms.append(
+            glm.translate(glm.mat4(1.0), glm.vec3(x, shadow_y, z))
+            * Rtilt
+            * Rplane
+            * glm.scale(glm.vec3(shadow_scale, shadow_scale, 1.0))
+        )
 
         for o in template_objs:
             # local transform of that object inside the tree (trunk offset, foliage offset, etc.)
@@ -287,7 +306,7 @@ def main():
         mesh = None
         mat = None
         for t in treeTypes:
-            for o in t:
+            for o in t["objs"]:
                 if (id(o.mesh), id(o.material)) == key:
                     mesh, mat = o.mesh, o.material
                     break
@@ -306,6 +325,18 @@ def main():
             instanced_obj = InstancedMeshObject(mesh, mat, matrices, colors)
 
         glrenderer.addObject(instanced_obj)
+
+    if shadow_transforms:
+        shadow_color = glm.vec4(0.0, 0.0, 0.0, 0.45)
+        shadow_mesh = Quad(color=shadow_color, width=1.0, height=1.0)
+        shadow_mat = Material(
+            vertex_shader="shader.vert",
+            fragment_shader="shadow.frag",
+            blend=True
+        )
+        shadow_colors = [shadow_color] * len(shadow_transforms)
+        shadow_instanced = InstancedMeshObject(shadow_mesh, shadow_mat, shadow_transforms, shadow_colors)
+        glrenderer.addObject(shadow_instanced)
 
     # -- SHEEP --
 
