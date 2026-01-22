@@ -32,7 +32,7 @@ from wolf import *
 from collections import defaultdict
 from OpenGL.GL import *
 
-SEASON = 1.0  # -1.0 = fall (orange), 0.0 = winter (white), 1.0 = spring (green)
+SEASON = -1.0  # -1.0 = fall (orange), 0.0 = winter (white), 1.0 = spring (green)
 
 
 def _lerp_color(a, b, t):

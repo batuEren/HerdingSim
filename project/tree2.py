@@ -246,7 +246,7 @@ def build_tree_instanced(height=6.0, width=2.0, foliage_cards=750, leaf_color=No
     log_mesh = Cylinder(
         radius=width / 4.0,
         height=trunk_height,
-        color=glm.vec4(0.8, 0.5, 0.3, 1.0),
+        color=glm.vec4(0.9, 0.7, 0.4, 1.0),
     )
 
     log_texture = Texture(
