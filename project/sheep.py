@@ -36,6 +36,7 @@ class Sheep:
         self.cohesion_weight = 0.8
         self.alignment_weight = 0.85
         self.separation_weight = 1.8
+        self.bound_box_length = 200
 
         # Body - To Do - Cube for now
         self.body_scale = glm.vec3(1.5, 1.5, 1.5)
@@ -54,6 +55,11 @@ class Sheep:
                 continue
             strength = 1.0 - (dist / self.obstacle_avoid_radius)
             steer += glm.normalize(offset) * strength
+
+
+
+        steer += glm.normalize(-self.walker_position) * max(abs(self.walker_position.x), abs(self.walker_position.x))/self.bound_box_length
+
         return steer
     
     def _flock(self):
