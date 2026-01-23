@@ -115,6 +115,12 @@ class Sheep:
         self.alignment_weight = 0.82
         self.separation_weight = 2.0
         self.bound_box_length = 200
+        self.bounce_speed_threshold = self.walk_speed * 1.15
+        self.bounce_amplitude = 0.15
+        self.bounce_frequency = 2.0
+        self.bob_phase = 0.0
+        self.bob_offset = 0.0
+        self.current_speed = 0.0
 
         if not Sheep._instanced_ready:
             Sheep.init_instancing(renderer, 1)
@@ -265,8 +271,15 @@ class Sheep:
 
         # update the character's position. We multiply by delta time to make sure it moves "walk_speed" units forward per second, regardless of framerate.
         speed = self.walk_speed * self._predator_speed_multiplier() * self._separation_speed_multiplier()
+        self.current_speed = speed
         self.walker_position += self.walker_direction * speed * delta_time
         self.walker_position.y = self.height_func(self.walker_position.x, self.walker_position.z)
+        if speed > self.bounce_speed_threshold:
+            self.bob_phase += delta_time * self.bounce_frequency * 2.0 * math.pi
+            self.bob_offset = math.sin(self.bob_phase) * self.bounce_amplitude
+        else:
+            self.bob_phase = 0.0
+            self.bob_offset = 0.0
         #print("walked by: " + str(self.walk_speed * delta_time))
         self.update_walker_geometry()
 
@@ -281,7 +294,7 @@ class Sheep:
             * glm.rotate(glm.mat4(1.0), glm.radians(180.0), glm.vec3(0.0, 1.0, 0.0))
         )
         root = (
-            glm.translate(self.walker_position + glm.vec3(0.0, self.body_scale.y * 0.5, 0.0))
+            glm.translate(self.walker_position + glm.vec3(0.0, self.body_scale.y * 0.5 + self.bob_offset, 0.0))
             * rotation
             * align
             * glm.scale(self.body_scale)
