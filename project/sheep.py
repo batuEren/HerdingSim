@@ -4,15 +4,93 @@ from framework.camera import Flycamera
 from framework.window import *
 from framework.renderer import *
 from framework.light import *
-from framework.shapes import Cube, UVSphere, Quad
-from framework.objects import MeshObject, InstancedMeshObject
+from framework.shapes import Cube, UVSphere, Quad, Cylinder, Cone
+from framework.objects import InstancedMeshObject
 from framework.materials import Material
 
 from pyglm import glm
 import numpy as np
 import random
+import math
 
 class Sheep:
+    _instanced_ready = False
+    _instanced_capacity = 0
+    _next_index = 0
+    _renderer = None
+    _parts = {}
+    _part_transforms = {}
+    _part_colors = {}
+    _dirty_transforms = False
+    _dirty_colors = set()
+
+    @classmethod
+    def init_instancing(cls, renderer, count):
+        if cls._instanced_ready:
+            return
+
+        cls._renderer = renderer
+        cls._instanced_capacity = count
+        cls._next_index = 0
+
+        def _identities(n):
+            return [glm.mat4(1.0) for _ in range(n)]
+
+        def _colors(color, n):
+            return [color for _ in range(n)]
+
+        body_mesh = UVSphere(1.0, color=glm.vec4(1.0))
+        head_mesh = UVSphere(0.6, color=glm.vec4(0.5, 0.5, 0.5, 1.0))
+        leg_mesh = Cylinder(radius=0.1, height=0.6, color=glm.vec4(0.3, 0.3, 0.3, 1.0))
+        eye_white_mesh = UVSphere(0.12, color=glm.vec4(1.0, 1.0, 1.0, 1.0))
+        eye_black_mesh = UVSphere(0.10, color=glm.vec4(0.0, 0.0, 0.0, 1.0))
+        ear_mesh = Cone(radius=0.15, height=0.25, segments=4, color=glm.vec4(0.5, 0.5, 0.5, 1.0))
+        tail_mesh = UVSphere(0.18, color=glm.vec4(1.0, 1.0, 1.0, 1.0))
+
+        wool_mat = Material()
+        head_mat = Material()
+        skin_mat = Material()
+        eye_white_mat = Material()
+        eye_black_mat = Material()
+
+        part_specs = {
+            "body": (body_mesh, wool_mat, count, glm.vec4(1.0, 1.0, 1.0, 1.0)),
+            "head": (head_mesh, head_mat, count, glm.vec4(0.5, 0.5, 0.5, 1.0)),
+            "legs": (leg_mesh, skin_mat, count * 4, glm.vec4(0.3, 0.3, 0.3, 1.0)),
+            "eye_white": (eye_white_mesh, eye_white_mat, count * 2, glm.vec4(1.0, 1.0, 1.0, 1.0)),
+            "eye_black": (eye_black_mesh, eye_black_mat, count * 2, glm.vec4(0.0, 0.0, 0.0, 1.0)),
+            "ears": (ear_mesh, head_mat, count * 2, glm.vec4(0.5, 0.5, 0.5, 1.0)),
+            "tail": (tail_mesh, wool_mat, count, glm.vec4(1.0, 1.0, 1.0, 1.0)),
+        }
+
+        for part, (mesh, mat, amount, color) in part_specs.items():
+            transforms = _identities(amount)
+            colors = _colors(color, amount)
+            instanced_obj = InstancedMeshObject(mesh, mat, transforms, colors)
+            renderer.addObject(instanced_obj)
+            cls._parts[part] = instanced_obj
+            cls._part_transforms[part] = transforms
+            cls._part_colors[part] = colors
+
+        cls._instanced_ready = True
+
+    @classmethod
+    def flush_instanced(cls):
+        if not cls._instanced_ready:
+            return
+
+        if cls._dirty_transforms:
+            for part, obj in cls._parts.items():
+                obj.update_transforms(cls._part_transforms[part])
+            cls._dirty_transforms = False
+
+        if cls._dirty_colors:
+            for part in cls._dirty_colors:
+                obj = cls._parts.get(part)
+                if obj is not None:
+                    obj.update_colors(cls._part_colors[part])
+            cls._dirty_colors = set()
+
     def __init__(self, renderer, height_func, color=glm.vec4(1.0, 1.0, 1.0, 1.0), obstacles=None, flock=None, predators=None):
         self.frames = 0
         self.walker_position = glm.vec3(0.0)
@@ -32,18 +110,25 @@ class Sheep:
         self.predator_avoid_strength = 8.0
         self.flock = flock if flock is not None else []
         self.neighbor_radius = 10.0
-        self.separation_radius = 4.0
-        self.cohesion_weight = 0.8
-        self.alignment_weight = 0.85
-        self.separation_weight = 1.8
+        self.separation_radius = 5.0
+        self.cohesion_weight = 0.75
+        self.alignment_weight = 0.82
+        self.separation_weight = 2.0
         self.bound_box_length = 200
 
-        # Body - To Do - Cube for now
-        self.body_scale = glm.vec3(1.5, 1.5, 1.5)
-        body_shape = UVSphere(color=self.color)
-        body_mat   = Material()
-        self.body  = MeshObject(body_shape, body_mat)
-        renderer.addObject(self.body)
+        if not Sheep._instanced_ready:
+            Sheep.init_instancing(renderer, 1)
+
+        self.index = Sheep._next_index
+        if self.index >= Sheep._instanced_capacity:
+            raise ValueError("Sheep instance capacity exceeded. Call Sheep.init_instancing(renderer, count).")
+        Sheep._next_index += 1
+
+        # Body - procedural parts instanced
+        self.body_scale = glm.vec3(1.5, 1.5, 1.5) * 0.7
+        self.color = color
+        Sheep._part_colors["body"][self.index] = self.color
+        Sheep._dirty_colors.add("body")
 
     def _avoid_obstacles(self):
         steer = glm.vec3(0.0)
@@ -56,9 +141,10 @@ class Sheep:
             strength = 1.0 - (dist / self.obstacle_avoid_radius)
             steer += glm.normalize(offset) * strength
 
+        dist = max(abs(self.walker_position.x), abs(self.walker_position.x))
 
-
-        steer += glm.normalize(-self.walker_position) * max(abs(self.walker_position.x), abs(self.walker_position.x))/self.bound_box_length
+        if dist > self.bound_box_length*0.7:
+            steer += glm.normalize(-self.walker_position) * (dist / self.bound_box_length)
 
         return steer
     
@@ -185,7 +271,58 @@ class Sheep:
         self.update_walker_geometry()
 
     def update_walker_geometry(self):
-        self.body.transform = glm.translate(self.walker_position + glm.vec3(0.0, self.body_scale.y * 0.5, 0.0)) * glm.scale(self.body_scale)
+        forward = glm.vec3(self.walker_direction.x, 0.0, self.walker_direction.z)
+        if glm.length(forward) < 1e-4:
+            forward = glm.vec3(1.0, 0.0, 0.0)
+        forward = glm.normalize(forward)
+        rotation = glm.mat4_cast(glm.quatLookAt(forward, glm.vec3(0.0, 1.0, 0.0)))
+        align = (
+            glm.rotate(glm.mat4(1.0), glm.radians(-90.0), glm.vec3(0.0, 1.0, 0.0))
+            * glm.rotate(glm.mat4(1.0), glm.radians(180.0), glm.vec3(0.0, 1.0, 0.0))
+        )
+        root = (
+            glm.translate(self.walker_position + glm.vec3(0.0, self.body_scale.y * 0.5, 0.0))
+            * rotation
+            * align
+            * glm.scale(self.body_scale)
+        )
+
+        body_transform = root * glm.scale(glm.vec3(1.0, 0.9, 0.9))
+        head_transform = body_transform * glm.translate(glm.vec3(1.2, 0.2, 0.0))
+
+        Sheep._part_transforms["body"][self.index] = body_transform
+        Sheep._part_transforms["head"][self.index] = head_transform
+
+        leg_offsets = [
+            glm.vec3(0.5, -0.55, 0.4),
+            glm.vec3(-0.5, -0.55, 0.4),
+            glm.vec3(0.5, -0.55, -0.4),
+            glm.vec3(-0.5, -0.55, -0.5),
+        ]
+        leg_base = self.index * 4
+        for i, offset in enumerate(leg_offsets):
+            Sheep._part_transforms["legs"][leg_base + i] = body_transform * glm.translate(offset)
+
+        eye_base = self.index * 2
+        for i, side in enumerate([-1, 1]):
+            eye_transform = head_transform * glm.translate(glm.vec3(0.45, 0.15, 0.2 * side))
+            Sheep._part_transforms["eye_white"][eye_base + i] = eye_transform
+            Sheep._part_transforms["eye_black"][eye_base + i] = eye_transform * glm.translate(glm.vec3(0.06, 0.0, 0.0))
+
+        ear_base = self.index * 2
+        for i, side in enumerate([-1, 1]):
+            ear_transform = (
+                head_transform
+                * glm.translate(glm.vec3(0.0, 0.55, 0.35 * side))
+                * glm.rotate(glm.radians(90), glm.vec3(0, 0, 1))
+                * glm.scale(glm.vec3(1.0, 0.5, 1.0))
+            )
+            Sheep._part_transforms["ears"][ear_base + i] = ear_transform
+
+        tail_transform = body_transform * glm.translate(glm.vec3(-1.05, 0.1, 0.0))
+        Sheep._part_transforms["tail"][self.index] = tail_transform
+
+        Sheep._dirty_transforms = True
 
 
     def animate(self, delta_time):
