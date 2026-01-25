@@ -388,7 +388,9 @@ def main():
 
     # -- WOLF --
 
-    for _ in range(3):
+    wolf_count = 3
+    Wolf.init_instancing(glrenderer, wolf_count)
+    for _ in range(wolf_count):
         w = Wolf(glrenderer, random_height_func, obstacles=tree_positions, flock=wolves, prey=sheeps)
         w.walker_position = glm.vec3(
             random.uniform(-20.0, 20.0),
@@ -469,6 +471,7 @@ def main():
         Sheep.flush_instanced()
         for w in wolves:
             w.animate(delta_time)
+        Wolf.flush_instanced()
 
         glrenderer.render()
 
