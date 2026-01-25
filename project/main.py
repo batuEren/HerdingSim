@@ -372,7 +372,7 @@ def main():
 
     sheeps = []
     wolves = []
-    sheep_count = 0
+    sheep_count = 40
     Sheep.init_instancing(glrenderer, sheep_count)
     for _ in range(sheep_count):
         s = Sheep(glrenderer, random_height_func, obstacles=tree_positions, flock=sheeps, predators=wolves)
@@ -388,7 +388,7 @@ def main():
 
     # -- WOLF --
 
-    for _ in range(0):
+    for _ in range(3):
         w = Wolf(glrenderer, random_height_func, obstacles=tree_positions, flock=wolves, prey=sheeps)
         w.walker_position = glm.vec3(
             random.uniform(-20.0, 20.0),
