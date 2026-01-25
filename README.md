@@ -31,6 +31,8 @@
 
 ## Seasons
 
+![Season Change](seasonChange.gif)
+
 - **Season controls**  
   Two buttons step seasons; `1` moves backward and `2` moves forward in time.
 
