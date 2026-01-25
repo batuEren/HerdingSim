@@ -33,15 +33,19 @@ from wolf import *
 from collections import defaultdict
 from OpenGL.GL import *
 
-SEASON = -1.0  # -1.0 = fall (orange), 0.0 = winter (white), 1.0 = spring (green)
-
+SEASON = -1.0  # -1.5..1.5 cycles: fall (-1), winter (0), spring (1), wrap spring<->fall
 
 def _lerp_color(a, b, t):
     return a * (1.0 - t) + b * t
 
 
 def _season_palette(season):
-    s = glm.clamp(season, -1.0, 1.0)
+    # wrap into [-1.5, 1.5] so spring<->fall transitions are continuous
+    s = season
+    while s > 1.5:
+        s -= 3.0
+    while s < -1.5:
+        s += 3.0
 
     fall_ground = glm.vec4(0.5, 0.5, 0.2, 1.0)
     winter_ground = glm.vec4(0.95, 0.95, 0.95, 1.0)
@@ -55,16 +59,28 @@ def _season_palette(season):
     winter_leaves = glm.vec4(0.92, 0.92, 0.92, 1.0)
     spring_leaves = glm.vec4(0.32, 0.60, 0.28, 1.0)
 
-    if s <= 0.0:
+    if s < -1.0:
+        # fall -> spring wrap
+        t = abs(-1.0 - s)
+        ground = _lerp_color(fall_ground, spring_ground, t)
+        grass = _lerp_color(fall_grass, spring_grass, t)
+        leaves = _lerp_color(fall_leaves, spring_leaves, t)
+    elif s <= 0.0:
         t = s + 1.0
         ground = _lerp_color(fall_ground, winter_ground, t)
         grass = _lerp_color(fall_grass, winter_grass, t)
         leaves = _lerp_color(fall_leaves, winter_leaves, t)
-    else:
+    elif s <= 1.0:
         t = s
         ground = _lerp_color(winter_ground, spring_ground, t)
         grass = _lerp_color(winter_grass, spring_grass, t)
         leaves = _lerp_color(winter_leaves, spring_leaves, t)
+    else:
+        # spring -> fall wrap
+        t = abs(1.0 - s)
+        ground = _lerp_color(spring_ground, fall_ground, t)
+        grass = _lerp_color(spring_grass, fall_grass, t)
+        leaves = _lerp_color(spring_leaves, fall_leaves, t)
 
     return ground, grass, leaves
 
@@ -435,7 +451,11 @@ def main():
             delta += season_rate * delta_time
 
         if delta != 0.0:
-            SEASON = glm.clamp(SEASON + delta, -1.0, 1.0)
+            SEASON = SEASON + delta
+            if SEASON > 1.5:
+                SEASON -= 3.0
+            elif SEASON < -1.5:
+                SEASON += 3.0
 
         if abs(SEASON - last_season) > 1e-4:
             _apply_season_to_env(SEASON, terrain_shape, grass_mesh, foliage_meshes)
