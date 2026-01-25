@@ -106,6 +106,7 @@ def _apply_season_to_env(season, terrain_mesh, grass_mesh, foliage_meshes):
 
 def main():
     global SEASON
+    init_random_height_params()
     width, height = 600, 600
     glwindow = OpenGLWindow(width, height)
 
