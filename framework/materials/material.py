@@ -94,6 +94,10 @@ class Material:
         if loc_time != -1:
             gl.glUniform1f(loc_time, glfw.get_time())
 
+        loc_season = gl.glGetUniformLocation(program, "uSeason")
+        if loc_season != -1 and hasattr(self, "season"):
+            gl.glUniform1f(loc_season, float(self.season))
+
         gl.glUniform1f(loc_ambient,     self.ambient_strength)
         gl.glUniform1f(loc_specular,    self.specular_strength)
         gl.glUniform1f(loc_diffuse,     self.diffuse_strength)

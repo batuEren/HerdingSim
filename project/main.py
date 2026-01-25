@@ -23,6 +23,7 @@ from framework.materials import Material, Texture
 from pyglm import glm
 import tree
 import tree2
+from foliage import FoliageCard
 from fence import *
 from grass import *
 from terrain import *
@@ -217,6 +218,7 @@ def main():
     # -- TREE --
 
     foliage_meshes = []
+    foliage_materials = []
     shadow_transforms = []
 
     def createRandomTrees(amount):
@@ -233,6 +235,8 @@ def main():
             for o in objs:
                 if isinstance(o, InstancedMeshObject):
                     foliage_meshes.append(o.mesh)
+                if isinstance(o, InstancedMeshObject) and isinstance(o.mesh, FoliageCard):
+                    foliage_materials.append(o.material)
             width = 2 + 4.0 * size
             shadow_scale = width * 3.0
             treeTypes.append({
@@ -245,6 +249,7 @@ def main():
 
     # store only matrices (and optional per-instance colors) per instancing group
     tree_instances = defaultdict(list)
+    tree_instance_colors = defaultdict(list)
 
     def _is_instanced_obj(o):
         # adapt if your class names differ
@@ -285,8 +290,12 @@ def main():
                     # some implementations store matrices under a different name
                     leaf_transforms = getattr(o, "matrices", [])
 
+                is_foliage = isinstance(o.mesh, FoliageCard)
                 for L in leaf_transforms:
                     tree_instances[key].append(obj_world * L)
+                    if is_foliage:
+                        threshold = 0.1 + random.random() * 0.6
+                        tree_instance_colors[key].append(glm.vec4(1.0, 1.0, 1.0, threshold))
             else:
                 # trunk: single matrix
                 tree_instances[key].append(obj_world)
@@ -317,7 +326,11 @@ def main():
             continue
 
         # If your InstancedMeshObject expects colors, you can still pass them
-        colors = [mesh.color] * len(matrices) if hasattr(mesh, "color") else None
+        colors = None
+        if key in tree_instance_colors and len(tree_instance_colors[key]) == len(matrices):
+            colors = tree_instance_colors[key]
+        elif hasattr(mesh, "color"):
+            colors = [mesh.color] * len(matrices)
 
         if colors is None:
             instanced_obj = InstancedMeshObject(mesh, mat, matrices)
@@ -403,14 +416,18 @@ def main():
 
     glrenderer.setSkybox(skybox)
 
+    for mat in foliage_materials:
+        mat.season = SEASON
+
     previous_time = glfw.get_time()
     last_season = SEASON
-    season_rate = 0.6
+    season_rate = 0.2
     while not glfw.window_should_close(glwindow.window):
         current_time = glfw.get_time()
         delta_time = current_time - previous_time
         previous_time = current_time
 
+        # key input
         delta = 0.0
         if glfw.get_key(glwindow.window, glfw.KEY_1) == glfw.PRESS:
             delta -= season_rate * delta_time
@@ -422,6 +439,8 @@ def main():
 
         if abs(SEASON - last_season) > 1e-4:
             _apply_season_to_env(SEASON, terrain_shape, grass_mesh, foliage_meshes)
+            for mat in foliage_materials:
+                mat.season = SEASON
             last_season = SEASON
 
         for s in sheeps:
