@@ -2,7 +2,7 @@
 
 ![Herding Simulator](screenshot.png)
 
-**Herding Simulator** is a real-time simulation environment built using **OpenGL** for rendering and **PyGLM** for mathematics and transformations. The project currently focuses on constructing a performant and extensible **procedural environment** that will later support large-scale agent-based simulations.
+**Herding Simulator** is a real-time simulation environment built using **OpenGL** for rendering and **PyGLM** for mathematics and transformations. The project combines a procedural environment with emerging **agent behavior** for wildlife dynamics.
 
 ## Environment & Rendering
 
@@ -21,12 +21,34 @@
 - **Wind-animated foliage shaders**  
   Custom vertex shaders animate grass and tree foliage using time-based sine and cosine functions. Wind strength and frequency vary spatially, creating subtle, non-uniform motion that avoids a synchronized look.
 
-## Planned Work
+## Agents & Behavior
 
-- Agent-based herding and crowd dynamics  
-- Environment-aware agent interaction  
-- Scalability testing with large populations  
+- **Sheep flocking and evasion**  
+  Sheep flock together and will run away from nearby wolves.
 
----
+- **Wolf pursuit**  
+  Wolves actively chase sheep when in range.
 
-The project currently serves as a **graphics- and performance-oriented sandbox**, designed to support future work on collective behavior without architectural rewrites.
+## Seasons
+
+- **Season controls**  
+  Two buttons step seasons; `1` moves backward and `2` moves forward in time.
+
+- **Seasonal visuals**  
+  As seasons change, leaf and grass colors shift, and in winter leaves fall off.
+
+## L-System Tree Logs
+
+Logs are generated using a 3D L-system with the following rule set:
+
+```
+axiom = "A"
+rules = {
+    "A": "F[+B][-B][\\B][/B][&B][^B]GGA",
+    "B": "F[+F]F[-F]F[\\F]F[/F]"
+}
+```
+
+Legend: `+ - ^` are rotations, `G` moves forward, `F` moves forward while drawing a cylinder.
+
+

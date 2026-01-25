@@ -19,10 +19,10 @@ def init_random_height_params(seed=None):
     global _RANDOM_HEIGHT_PARAMS
     rng = random.Random(seed) if seed is not None else random
     _RANDOM_HEIGHT_PARAMS = {
-        "a1": rng.uniform(2.0, 3.2),
+        "a1": rng.uniform(2.0, 6.2),
         "f1x": rng.uniform(0.03, 0.08),
         "f1z": rng.uniform(0.015, 0.05),
-        "a2": rng.uniform(1.8, 2.8),
+        "a2": rng.uniform(1.8, 3.8),
         "f2": rng.uniform(0.015, 0.04),
     }
     return _RANDOM_HEIGHT_PARAMS
