@@ -91,7 +91,7 @@ class Sheep:
                     obj.update_colors(cls._part_colors[part])
             cls._dirty_colors = set()
 
-    def __init__(self, renderer, height_func, color=glm.vec4(1.0, 1.0, 1.0, 1.0), obstacles=None, flock=None, predators=None):
+    def __init__(self, renderer, height_func, color=glm.vec4(1.0, 1.0, 1.0, 1.0), obstacles=None, flock=None, predators=None, bounds=None):
         self.frames = 0
         self.walker_position = glm.vec3(0.0)
         self.walker_direction = glm.vec3(1.0, 0.0, 0.0)
@@ -115,6 +115,7 @@ class Sheep:
         self.alignment_weight = 0.82
         self.separation_weight = 2.0
         self.bound_box_length = 200
+        self.bounds = bounds  # (half_width, half_depth) in world units
         self.bounce_speed_threshold = self.walk_speed * 1.15
         self.bounce_amplitude = 0.15
         self.bounce_frequency = 2.0
@@ -273,6 +274,20 @@ class Sheep:
         speed = self.walk_speed * self._predator_speed_multiplier() * self._separation_speed_multiplier()
         self.current_speed = speed
         self.walker_position += self.walker_direction * speed * delta_time
+        if self.bounds is not None:
+            half_width, half_depth = self.bounds
+            clamped_x = glm.clamp(self.walker_position.x, -half_width, half_width)
+            clamped_z = glm.clamp(self.walker_position.z, -half_depth, half_depth)
+
+            if clamped_x != self.walker_position.x:
+                self.walker_direction.x = -abs(self.walker_direction.x) if clamped_x >= half_width else abs(self.walker_direction.x)
+                self.walker_position.x = clamped_x
+            if clamped_z != self.walker_position.z:
+                self.walker_direction.z = -abs(self.walker_direction.z) if clamped_z >= half_depth else abs(self.walker_direction.z)
+                self.walker_position.z = clamped_z
+
+            if glm.length(self.walker_direction) > 0.0001:
+                self.walker_direction = glm.normalize(self.walker_direction)
         self.walker_position.y = self.height_func(self.walker_position.x, self.walker_position.z)
         if speed > self.bounce_speed_threshold:
             self.bob_phase += delta_time * self.bounce_frequency * 2.0 * math.pi

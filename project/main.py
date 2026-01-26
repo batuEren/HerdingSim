@@ -111,7 +111,7 @@ def main():
     glwindow = OpenGLWindow(width, height)
 
     camera = Flycamera(width, height, 70.0, 0.1, 300.0)
-    camera.position += glm.vec3(0.0, 6.0, 7.0)
+    camera.position += glm.vec3(0.0, 16.0, 7.0)
     camera.updateView()
 
     glrenderer = GLRenderer(glwindow, camera)
@@ -375,7 +375,14 @@ def main():
     sheep_count = 40
     Sheep.init_instancing(glrenderer, sheep_count)
     for _ in range(sheep_count):
-        s = Sheep(glrenderer, random_height_func, obstacles=tree_positions, flock=sheeps, predators=wolves)
+        s = Sheep(
+            glrenderer,
+            random_height_func,
+            obstacles=tree_positions,
+            flock=sheeps,
+            predators=wolves,
+            bounds=(terrain_width / 2.0, terrain_depth / 2.0),
+        )
         s.walker_position = glm.vec3(
             random.uniform(-8.0, 8.0),
             0.0,
