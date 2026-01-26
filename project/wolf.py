@@ -10,6 +10,7 @@ from framework.materials import Material
 
 from pyglm import glm
 import random
+import math
 
 
 class Wolf:
@@ -38,15 +39,15 @@ class Wolf:
         def _colors(color, n):
             return [color for _ in range(n)]
 
-        body_mesh = UVSphere(1.0, color=glm.vec4(0.3, 0.3, 0.3, 1.0))
-        head_mesh = UVSphere(0.6, color=glm.vec4(0.35, 0.35, 0.35, 1.0))
+        body_mesh = Cylinder(radius=0.55, height=1.6, color=glm.vec4(0.4, 0.4, 0.4, 1.0))
+        head_mesh = UVSphere(0.6, color=glm.vec4(0.45, 0.45, 0.45, 1.0))
         leg_mesh = Cylinder(radius=0.1, height=0.75, color=glm.vec4(0.25, 0.25, 0.25, 1.0))
         eye_white_mesh = UVSphere(0.12, color=glm.vec4(1.0, 1.0, 1.0, 1.0))
         eye_black_mesh = UVSphere(0.09, color=glm.vec4(0.0, 0.0, 0.0, 1.0))
         ear_mesh = Cone(radius=0.35, height=0.5, segments=4, color=glm.vec4(0.3, 0.3, 0.3, 1.0))
-        tail_cone_mesh = Cone(radius=0.4, height=0.25, segments=8, color=glm.vec4(0.45, 0.45, 0.45, 1.0))
-        tail_cyl_mesh = Cylinder(radius=0.2, height=0.8, color=glm.vec4(0.45, 0.45, 0.45, 1.0))
-        snout_mesh = Cone(radius=0.35, height=0.45, segments=8, color=glm.vec4(0.4, 0.4, 0.4, 1.0))
+        tail_cone_mesh = Cone(radius=0.48, height=0.2, segments=8, color=glm.vec4(0.45, 0.45, 0.45, 1.0))
+        tail_cyl_mesh = Cylinder(radius=0.28, height=0.55, color=glm.vec4(0.45, 0.45, 0.45, 1.0))
+        snout_mesh = Cone(radius=0.34, height=0.32, segments=8, color=glm.vec4(0.4, 0.4, 0.4, 1.0))
         nose_mesh = UVSphere(0.13, color=glm.vec4(0.1, 0.1, 0.1, 1.0))
 
         fur_mat = Material()
@@ -54,8 +55,8 @@ class Wolf:
         eye_black_mat = Material()
 
         part_specs = {
-            "body": (body_mesh, fur_mat, count, glm.vec4(0.3, 0.3, 0.3, 1.0)),
-            "head": (head_mesh, fur_mat, count, glm.vec4(0.35, 0.35, 0.35, 1.0)),
+            "body": (body_mesh, fur_mat, count, glm.vec4(0.4, 0.4, 0.4, 1.0)),
+            "head": (head_mesh, fur_mat, count, glm.vec4(0.45, 0.45, 0.45, 1.0)),
             "legs": (leg_mesh, fur_mat, count * 4, glm.vec4(0.25, 0.25, 0.25, 1.0)),
             "tail_cone": (tail_cone_mesh, fur_mat, count, glm.vec4(0.45, 0.45, 0.45, 1.0)),
             "tail_cyl": (tail_cyl_mesh, fur_mat, count, glm.vec4(0.45, 0.45, 0.45, 1.0)),
@@ -94,7 +95,7 @@ class Wolf:
                     obj.update_colors(cls._part_colors[part])
             cls._dirty_colors = set()
 
-    def __init__(self, renderer, height_func, color=glm.vec4(0.2, 0.2, 0.2, 1.0), obstacles=None, flock=None, prey=None):
+    def __init__(self, renderer, height_func, color=glm.vec4(0.4, 0.4, 0.48, 1.0), obstacles=None, flock=None, prey=None):
         self.frames = 0
         self.walker_position = glm.vec3(0.0)
         self.walker_direction = glm.vec3(1.0, 0.0, 0.0)
@@ -114,6 +115,10 @@ class Wolf:
         self.separation_weight = 1.2
         self.chase_radius = 40.0
         self.chase_weight = 2.5
+        self.bounce_amplitude = 0.12
+        self.bounce_frequency = 2.2
+        self.bob_phase = random.random() * 2.0 * math.pi
+        self.bob_offset = 0.0
 
         if not Wolf._instanced_ready:
             Wolf.init_instancing(renderer, 1)
@@ -123,7 +128,7 @@ class Wolf:
             raise ValueError("Wolf instance capacity exceeded. Call Wolf.init_instancing(renderer, count).")
         Wolf._next_index += 1
 
-        self.body_scale = glm.vec3(1.6, 1.6, 1.6) * 0.5
+        self.body_scale = glm.vec3(1.6, 1.6, 1.6) * 0.8
         self.color = color
 
         fur_color = glm.vec4(color.x, color.y, color.z, color.w)
@@ -252,6 +257,8 @@ class Wolf:
 
         self.walker_position += self.walker_direction * self.walk_speed * delta_time
         self.walker_position.y = self.height_func(self.walker_position.x, self.walker_position.z)
+        self.bob_phase += delta_time * self.bounce_frequency * 2.0 * math.pi
+        self.bob_offset = math.sin(self.bob_phase) * self.bounce_amplitude
         self.update_walker_geometry()
 
     def update_walker_geometry(self):
@@ -265,30 +272,32 @@ class Wolf:
             * glm.rotate(glm.mat4(1.0), glm.radians(180.0), glm.vec3(0.0, 1.0, 0.0))
         )
         root = (
-            glm.translate(self.walker_position + glm.vec3(0.0, self.body_scale.y * 0.5, 0.0))
+            glm.translate(self.walker_position + glm.vec3(0.0, self.body_scale.y * 0.5 + self.bob_offset, 0.0))
             * rotation
             * align
             * glm.scale(self.body_scale)
         )
 
-        body_transform = root * glm.scale(glm.vec3(1.3, 0.7, 0.7))
-        head_transform = body_transform * glm.translate(glm.vec3(1.05, 0.17, 0.0))
+        body_base = root * glm.scale(glm.vec3(1.3, 0.7, 0.7))
+        body_transform = body_base * glm.rotate(glm.radians(90), glm.vec3(0, 0, 1))
+        head_base = body_base * glm.translate(glm.vec3(1.05, 0.4, 0.0))
+        head_transform = head_base * glm.scale(glm.vec3(0.8, 1.0, 1.0))
 
         Wolf._part_transforms["body"][self.index] = body_transform
         Wolf._part_transforms["head"][self.index] = head_transform
 
         leg_offsets = [
-            glm.vec3(0.5, -1.0, 0.4),
-            glm.vec3(-0.5, -1.0, 0.4),
-            glm.vec3(0.5, -1.0, -0.4),
-            glm.vec3(-0.5, -1.0, -0.4),
+            glm.vec3(0.5, -0.7, 0.4),
+            glm.vec3(-0.5, -0.7, 0.4),
+            glm.vec3(0.5, -0.7, -0.4),
+            glm.vec3(-0.5, -0.7, -0.4),
         ]
         leg_base = self.index * 4
         for i, offset in enumerate(leg_offsets):
-            Wolf._part_transforms["legs"][leg_base + i] = body_transform * glm.translate(offset)
+            Wolf._part_transforms["legs"][leg_base + i] = body_base * glm.translate(offset)
 
         tail_cone_transform = (
-            body_transform
+            body_base
             * glm.translate(glm.vec3(-0.85, 0.1, 0.0))
             * glm.rotate(glm.radians(90), glm.vec3(0, 0, 1))
             * glm.rotate(glm.radians(-20), glm.vec3(0, 0, 1))
@@ -297,7 +306,7 @@ class Wolf:
 
         tail_cyl_transform = (
             tail_cone_transform
-            * glm.translate(glm.vec3(-0.3, 0.1, 0.0))
+            * glm.translate(glm.vec3(-0.22, 0.08, 0.0))
             * glm.rotate(glm.radians(-90), glm.vec3(0, 0, 1))
             * glm.rotate(glm.radians(-15), glm.vec3(0, 0, 1))
         )
@@ -305,28 +314,32 @@ class Wolf:
 
         eye_base = self.index * 2
         for i, side in enumerate([-1, 1]):
-            eye_transform = head_transform * glm.translate(glm.vec3(0.45, 0.15, 0.2 * side))
+            eye_transform = (
+                head_base
+                * glm.scale(glm.vec3(0.8, 1.0, 1.0))
+                * glm.translate(glm.vec3(0.45, 0.15, 0.2 * side))
+            )
             Wolf._part_transforms["eye_white"][eye_base + i] = eye_transform
             Wolf._part_transforms["eye_black"][eye_base + i] = eye_transform * glm.translate(glm.vec3(0.05, 0.0, 0.0))
 
         ear_base = self.index * 2
         for i, side in enumerate([-1, 1]):
             ear_transform = (
-                head_transform
+                head_base
                 * glm.translate(glm.vec3(0.0, 0.45, 0.25 * side))
                 * glm.rotate(glm.radians(90), glm.vec3(0, 0, 1))
             )
             Wolf._part_transforms["ears"][ear_base + i] = ear_transform
 
         snout_transform = (
-            head_transform
-            * glm.translate(glm.vec3(0.6, -0.0, 0.0))
+            head_base
+            * glm.translate(glm.vec3(0.52, -0.0, 0.0))
             * glm.rotate(glm.radians(-90), glm.vec3(0, 0, 1))
-            * glm.scale(glm.vec3(1.0, 1.2, 1.0))
+            * glm.scale(glm.vec3(1.0, 1.05, 1.0))
         )
         Wolf._part_transforms["snout"][self.index] = snout_transform
 
-        nose_transform = head_transform * glm.translate(glm.vec3(0.6 + 0.225 - 0.04, -0.05, 0.0))
+        nose_transform = head_base * glm.translate(glm.vec3(0.52 + 0.16 - 0.03, -0.04, 0.0))
         Wolf._part_transforms["nose"][self.index] = nose_transform
 
         Wolf._dirty_transforms = True
