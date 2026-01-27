@@ -12,7 +12,12 @@ class MeshObject(Object):
     def draw(self, camera, lights):
         if self.visible == False:
             return
-        
+        prev_blend = gl.glIsEnabled(gl.GL_BLEND)
+        if getattr(self.material, "blend", False):
+            gl.glEnable(gl.GL_BLEND)
+        else:
+            gl.glDisable(gl.GL_BLEND)
+
         self.material.set_uniforms(False, self, camera, lights)
 
         if self.mesh.VAO is None:
@@ -27,3 +32,7 @@ class MeshObject(Object):
             gl.glDrawArrays(gl.GL_TRIANGLES, 0, len(self.mesh.vertices))
 
         gl.glBindVertexArray(0)
+        if prev_blend:
+            gl.glEnable(gl.GL_BLEND)
+        else:
+            gl.glDisable(gl.GL_BLEND)

@@ -16,11 +16,13 @@ uniform float uTime;
 uniform float wind_color_strength = 1.70;
 uniform float wind_color_freq = 1.2;
 uniform vec2  wind_color_world_scale = vec2(0.22, 0.17);
+uniform float uSeason = 0.0;
 
 in vec3 frag_normal;
 in vec4 frag_color;
 in vec4 frag_pos;
 in vec2 frag_uv;
+in float leaf_threshold;
 
 #ifdef USE_ALBEDO_TEXTURE
 uniform sampler2D albedo_texture_sampler;
@@ -34,6 +36,8 @@ out vec4 out_color;
 
 void main()
 {
+    if (abs(uSeason) < leaf_threshold) discard;
+
     vec2 scaled_uv = frag_uv * texture_scale;
 
     vec3 N = normalize(frag_normal);
