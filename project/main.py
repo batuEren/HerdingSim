@@ -138,8 +138,8 @@ def main():
     terrain_shape = Terrain(
         width=terrain_width,
         depth=terrain_depth,
-        res_x=50,  # increase for smoother geometry
-        res_z=50,
+        res_x=25,  # increase for smoother geometry
+        res_z=25,
         color=ground_color
     )
 
@@ -382,6 +382,7 @@ def main():
             flock=sheeps,
             predators=wolves,
             bounds=(terrain_width / 2.0, terrain_depth / 2.0),
+            #color = glm.vec4(1.0, 0.3, 0.3, 1.0)
         )
         s.walker_position = glm.vec3(
             random.uniform(-8.0, 8.0),
@@ -398,7 +399,9 @@ def main():
     wolf_count = 3
     Wolf.init_instancing(glrenderer, wolf_count)
     for _ in range(wolf_count):
-        w = Wolf(glrenderer, random_height_func, obstacles=tree_positions, flock=wolves, prey=sheeps)
+        w = Wolf(glrenderer, random_height_func, obstacles=tree_positions, flock=wolves, prey=sheeps,
+                 #color=glm.vec4(0.3, 0.3, 1.0, 1.0)
+                 )
         w.walker_position = glm.vec3(
             random.uniform(-20.0, 20.0),
             0.0,
