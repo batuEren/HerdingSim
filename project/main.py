@@ -280,6 +280,11 @@ def main():
         base_y = random_height_func(x, z)
         tree_positions.append(glm.vec3(x, base_y, z))
         tree_translation = glm.translate(glm.mat4(1.0), glm.vec3(x, base_y, z))
+        tree_yaw = glm.rotate(
+            glm.mat4(1.0),
+            random.random() * 6.28318530718,
+            glm.vec3(0.0, 1.0, 0.0)
+        )
 
         n = terrain_normal(x, z)
         Rtilt = align_up_to_normal(n)
@@ -296,7 +301,7 @@ def main():
         for o in template_objs:
             # local transform of that object inside the tree (trunk offset, foliage offset, etc.)
             local_obj = getattr(o, "transform", glm.mat4(1.0))
-            obj_world = tree_translation * local_obj
+            obj_world = tree_translation * tree_yaw * local_obj
 
             key = (id(o.mesh), id(o.material))
 
