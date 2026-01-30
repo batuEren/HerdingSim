@@ -68,6 +68,12 @@ class InstancedMeshObject(Object):
         gl.glBufferSubData(gl.GL_ARRAY_BUFFER, 0, arr.nbytes, arr)
 
     def draw(self, camera, lights):
+        prev_blend = gl.glIsEnabled(gl.GL_BLEND)
+        if getattr(self.material, "blend", False):
+            gl.glEnable(gl.GL_BLEND)
+        else:
+            gl.glDisable(gl.GL_BLEND)
+
         self.material.set_uniforms(True, self, camera, lights)
 
         gl.glBindVertexArray(self.mesh.VAO)
@@ -78,3 +84,7 @@ class InstancedMeshObject(Object):
             gl.glDrawArraysInstanced(gl.GL_TRIANGLES, 0, len(self.mesh.vertices), self.amount)
 
         gl.glBindVertexArray(0)
+        if prev_blend:
+            gl.glEnable(gl.GL_BLEND)
+        else:
+            gl.glDisable(gl.GL_BLEND)

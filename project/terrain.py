@@ -1,5 +1,6 @@
 # terrain.py
 import math
+import random
 import numpy as np
 from pyglm import glm
 from framework.shapes import Shape
@@ -12,11 +13,28 @@ def default_height_func(x, z):
         0.3 * math.sin(0.05 * (x + z))
     )
 
+_RANDOM_HEIGHT_PARAMS = None
+
+def init_random_height_params(seed=None):
+    global _RANDOM_HEIGHT_PARAMS
+    rng = random.Random(seed) if seed is not None else random
+    _RANDOM_HEIGHT_PARAMS = {
+        "a1": rng.uniform(2.0, 6.2),
+        "f1x": rng.uniform(0.03, 0.08),
+        "f1z": rng.uniform(0.015, 0.05),
+        "a2": rng.uniform(1.8, 3.8),
+        "f2": rng.uniform(0.015, 0.04),
+    }
+    return _RANDOM_HEIGHT_PARAMS
+
 def random_height_func(x, z):
-    #[TODO] create random values and store
+    # Initialize once per program run.
+    if _RANDOM_HEIGHT_PARAMS is None:
+        init_random_height_params()
+    p = _RANDOM_HEIGHT_PARAMS
     return (
-        2.7 * math.sin(0.05 * x) * math.cos(0.025 * z) +
-        2.3 * math.sin(0.025 * (x + z))
+        p["a1"] * math.sin(p["f1x"] * x) * math.cos(p["f1z"] * z) +
+        p["a2"] * math.sin(p["f2"] * (x + z))
     )
 
 

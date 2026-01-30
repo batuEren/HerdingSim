@@ -12,6 +12,7 @@
 """
 import random
 import sys, os
+import numpy as np
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from framework.camera import *
 from framework.renderer import *
@@ -22,23 +23,95 @@ from framework.materials import Material, Texture
 from pyglm import glm
 import tree
 import tree2
+from foliage import FoliageCard
 from fence import *
 from grass import *
 from terrain import *
 from skybox import *
 from sheep import *
+from wolf import *
 from collections import defaultdict
 from OpenGL.GL import *
+
+SEASON = -1.0  # -1.5..1.5 cycles: fall (-1), winter (0), spring (1), wrap spring<->fall
+
+def _lerp_color(a, b, t):
+    return a * (1.0 - t) + b * t
+
+
+def _season_palette(season):
+    # wrap into [-1.5, 1.5] so spring<->fall transitions are continuous
+    s = season
+    while s > 1.5:
+        s -= 3.0
+    while s < -1.5:
+        s += 3.0
+
+    fall_ground = glm.vec4(0.5, 0.5, 0.2, 1.0)
+    winter_ground = glm.vec4(0.95, 0.95, 0.95, 1.0)
+    spring_ground = glm.vec4(0.32, 0.55, 0.26, 1.0)
+
+    fall_grass = glm.vec4(0.5, 0.5, 0.2, 1.0)
+    winter_grass = glm.vec4(0.92, 0.92, 0.92, 1.0)
+    spring_grass = glm.vec4(0.30, 0.65, 0.28, 1.0)
+
+    fall_leaves = glm.vec4(0.95, 0.40, 0.02, 1.0)
+    winter_leaves = glm.vec4(0.92, 0.92, 0.92, 1.0)
+    spring_leaves = glm.vec4(0.32, 0.60, 0.28, 1.0)
+
+    if s < -1.0:
+        # fall -> spring wrap
+        t = abs(-1.0 - s)
+        ground = _lerp_color(fall_ground, spring_ground, t)
+        grass = _lerp_color(fall_grass, spring_grass, t)
+        leaves = _lerp_color(fall_leaves, spring_leaves, t)
+    elif s <= 0.0:
+        t = s + 1.0
+        ground = _lerp_color(fall_ground, winter_ground, t)
+        grass = _lerp_color(fall_grass, winter_grass, t)
+        leaves = _lerp_color(fall_leaves, winter_leaves, t)
+    elif s <= 1.0:
+        t = s
+        ground = _lerp_color(winter_ground, spring_ground, t)
+        grass = _lerp_color(winter_grass, spring_grass, t)
+        leaves = _lerp_color(winter_leaves, spring_leaves, t)
+    else:
+        # spring -> fall wrap
+        t = abs(1.0 - s)
+        ground = _lerp_color(spring_ground, fall_ground, t)
+        grass = _lerp_color(spring_grass, fall_grass, t)
+        leaves = _lerp_color(spring_leaves, fall_leaves, t)
+
+    return ground, grass, leaves
+
+
+def _set_mesh_color(mesh, color):
+    if mesh.vertices.size == 0 or mesh.colors.size == 0:
+        mesh.createGeometry()
+
+    c = color.to_list() if hasattr(color, "to_list") else color
+    arr = np.tile(np.array(c, dtype=np.float32), (mesh.colors.shape[0], 1))
+    mesh.update_colors(arr)
+
+
+def _apply_season_to_env(season, terrain_mesh, grass_mesh, foliage_meshes):
+    ground, grass, leaves = _season_palette(season)
+    _set_mesh_color(terrain_mesh, ground)
+    _set_mesh_color(grass_mesh, grass)
+    for mesh in foliage_meshes:
+        _set_mesh_color(mesh, leaves)
 
 
 
 
 def main():
+    global SEASON
+    init_random_height_params()
     width, height = 600, 600
     glwindow = OpenGLWindow(width, height)
 
     camera = Flycamera(width, height, 70.0, 0.1, 300.0)
-    camera.position += glm.vec3(0.0, 6.0, 7.0)
+    camera.position += glm.vec3(0.0, 16.0, 7.0)
     camera.updateView()
 
     glrenderer = GLRenderer(glwindow, camera)
@@ -47,8 +120,8 @@ def main():
 
     glEnable(GL_MULTISAMPLE)
     glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE)
-    glDisable(GL_BLEND)  # usually best with A2C for cutout foliage
-    glDepthMask(GL_TRUE)  # keep writing depth so grass self-occludes nicely
+    glDisable(GL_BLEND)
+    glDepthMask(GL_TRUE)
 
     glrenderer.addLight(PointLight(glm.vec4(000.0, 5000.0, 3000.0, 1.0), glm.vec4(0.5, 0.5, 0.5, 1.0)))
 
@@ -60,16 +133,13 @@ def main():
     terrain_width = 200
     terrain_depth = 200
 
-    colorRand = random.random()
-    #leaf_color = glm.vec4(0.95, 0.40, 0.02, 1.0)
-    #ground_color = glm.vec4(0.85, 0.45, 0.1, 1.0)
-    ground_color = glm.vec4(0.5, 0.5, 0.2, 1.0)
+    ground_color, grass_color, leaf_color = _season_palette(SEASON)
 
     terrain_shape = Terrain(
         width=terrain_width,
         depth=terrain_depth,
-        res_x=50,  # increase for smoother geometry
-        res_z=50,
+        res_x=25,  # increase for smoother geometry
+        res_z=25,
         color=ground_color
     )
 
@@ -84,8 +154,6 @@ def main():
 
     # -- GRASS --
 
-    #grass_color = glm.vec4(0.85, 0.45, 0.1, 1.0) # nice orange
-    grass_color = glm.vec4(0.5, 0.5, 0.2, 1.0)
     grass_mesh = Grass(radius=0.45, height=0.9, color=grass_color)
     grass_texture = Texture(
         file_path=os.path.join(TEXTURE_DIR, "grass9.png"),
@@ -166,6 +234,10 @@ def main():
 
     # -- TREE --
 
+    foliage_meshes = []
+    foliage_materials = []
+    shadow_transforms = []
+
     def createRandomTrees(amount):
         treeTypes = []
         for i in range(amount):
@@ -174,15 +246,27 @@ def main():
             objs = tree2.build_tree_instanced(
                 8 + 16.0 * size,
                 2 + 4.0 * size,
-                foliage_cards=1500+(int)(size*2000)
+                foliage_cards=1500+(int)(size*2000),
+                leaf_color=leaf_color
             )
-            treeTypes.append(objs)
+            for o in objs:
+                if isinstance(o, InstancedMeshObject):
+                    foliage_meshes.append(o.mesh)
+                if isinstance(o, InstancedMeshObject) and isinstance(o.mesh, FoliageCard):
+                    foliage_materials.append(o.material)
+            width = 2 + 4.0 * size
+            shadow_scale = width * 3.0
+            treeTypes.append({
+                "objs": objs,
+                "shadow_scale": shadow_scale,
+            })
         return treeTypes
 
     treeTypes = createRandomTrees(5)
 
     # store only matrices (and optional per-instance colors) per instancing group
     tree_instances = defaultdict(list)
+    tree_instance_colors = defaultdict(list)
 
     def _is_instanced_obj(o):
         # adapt if your class names differ
@@ -190,16 +274,34 @@ def main():
 
     def putRandomTree(treeTypes, x, z):
         rand = random.randrange(len(treeTypes))
-        template_objs = treeTypes[rand]
+        template = treeTypes[rand]
+        template_objs = template["objs"]
 
         base_y = random_height_func(x, z)
         tree_positions.append(glm.vec3(x, base_y, z))
         tree_translation = glm.translate(glm.mat4(1.0), glm.vec3(x, base_y, z))
+        tree_yaw = glm.rotate(
+            glm.mat4(1.0),
+            random.random() * 6.28318530718,
+            glm.vec3(0.0, 1.0, 0.0)
+        )
+
+        n = terrain_normal(x, z)
+        Rtilt = align_up_to_normal(n)
+        Rplane = glm.rotate(glm.mat4(1.0), glm.radians(90.0), glm.vec3(1.0, 0.0, 0.0))
+        shadow_scale = template["shadow_scale"]
+        shadow_y = base_y + 0.92
+        shadow_transforms.append(
+            glm.translate(glm.mat4(1.0), glm.vec3(x, shadow_y, z))
+            * Rtilt
+            * Rplane
+            * glm.scale(glm.vec3(shadow_scale, shadow_scale, 1.0))
+        )
 
         for o in template_objs:
             # local transform of that object inside the tree (trunk offset, foliage offset, etc.)
             local_obj = getattr(o, "transform", glm.mat4(1.0))
-            obj_world = tree_translation * local_obj
+            obj_world = tree_translation * tree_yaw * local_obj
 
             key = (id(o.mesh), id(o.material))
 
@@ -210,8 +312,12 @@ def main():
                     # some implementations store matrices under a different name
                     leaf_transforms = getattr(o, "matrices", [])
 
+                is_foliage = isinstance(o.mesh, FoliageCard)
                 for L in leaf_transforms:
                     tree_instances[key].append(obj_world * L)
+                    if is_foliage:
+                        threshold = 0.1 + random.random() * 0.6
+                        tree_instance_colors[key].append(glm.vec4(1.0, 1.0, 1.0, threshold))
             else:
                 # trunk: single matrix
                 tree_instances[key].append(obj_world)
@@ -231,7 +337,7 @@ def main():
         mesh = None
         mat = None
         for t in treeTypes:
-            for o in t:
+            for o in t["objs"]:
                 if (id(o.mesh), id(o.material)) == key:
                     mesh, mat = o.mesh, o.material
                     break
@@ -242,7 +348,11 @@ def main():
             continue
 
         # If your InstancedMeshObject expects colors, you can still pass them
-        colors = [mesh.color] * len(matrices) if hasattr(mesh, "color") else None
+        colors = None
+        if key in tree_instance_colors and len(tree_instance_colors[key]) == len(matrices):
+            colors = tree_instance_colors[key]
+        elif hasattr(mesh, "color"):
+            colors = [mesh.color] * len(matrices)
 
         if colors is None:
             instanced_obj = InstancedMeshObject(mesh, mat, matrices)
@@ -251,11 +361,34 @@ def main():
 
         glrenderer.addObject(instanced_obj)
 
+    if shadow_transforms:
+        shadow_color = glm.vec4(0.0, 0.0, 0.0, 0.45)
+        shadow_mesh = Quad(color=shadow_color, width=1.0, height=1.0)
+        shadow_mat = Material(
+            vertex_shader="shader.vert",
+            fragment_shader="shadow.frag",
+            blend=True
+        )
+        shadow_colors = [shadow_color] * len(shadow_transforms)
+        shadow_instanced = InstancedMeshObject(shadow_mesh, shadow_mat, shadow_transforms, shadow_colors)
+        glrenderer.addObject(shadow_instanced)
+
     # -- SHEEP --
 
     sheeps = []
-    for _ in range(40):
-        s = Sheep(glrenderer, random_height_func, obstacles=tree_positions, flock=sheeps)
+    wolves = []
+    sheep_count = 40
+    Sheep.init_instancing(glrenderer, sheep_count)
+    for _ in range(sheep_count):
+        s = Sheep(
+            glrenderer,
+            random_height_func,
+            obstacles=tree_positions,
+            flock=sheeps,
+            predators=wolves,
+            bounds=(terrain_width / 2.0, terrain_depth / 2.0),
+            #color = glm.vec4(1.0, 0.3, 0.3, 1.0)
+        )
         s.walker_position = glm.vec3(
             random.uniform(-8.0, 8.0),
             0.0,
@@ -264,6 +397,24 @@ def main():
         s.walker_position.y = random_height_func(s.walker_position.x, s.walker_position.z)
         s.update_walker_geometry()
         sheeps.append(s)
+    Sheep.flush_instanced()
+
+    # -- WOLF --
+
+    wolf_count = 3
+    Wolf.init_instancing(glrenderer, wolf_count)
+    for _ in range(wolf_count):
+        w = Wolf(glrenderer, random_height_func, obstacles=tree_positions, flock=wolves, prey=sheeps,
+                 #color=glm.vec4(0.3, 0.3, 1.0, 1.0)
+                 )
+        w.walker_position = glm.vec3(
+            random.uniform(-20.0, 20.0),
+            0.0,
+            random.uniform(-20.0, 20.0),
+        )
+        w.walker_position.y = random_height_func(w.walker_position.x, w.walker_position.z)
+        w.update_walker_geometry()
+        wolves.append(w)
 
     # -- FENCE --
     def buildFence(fence_start = glm.vec3(-40.0, 0.0, -40.0), fence_end   = glm.vec3( 40.0, 0.0, -40.0)):
@@ -299,14 +450,43 @@ def main():
 
     glrenderer.setSkybox(skybox)
 
+    for mat in foliage_materials:
+        mat.season = SEASON
+
     previous_time = glfw.get_time()
+    last_season = SEASON
+    season_rate = 0.2
     while not glfw.window_should_close(glwindow.window):
         current_time = glfw.get_time()
         delta_time = current_time - previous_time
         previous_time = current_time
 
+        # key input
+        delta = 0.0
+        if glfw.get_key(glwindow.window, glfw.KEY_1) == glfw.PRESS:
+            delta -= season_rate * delta_time
+        if glfw.get_key(glwindow.window, glfw.KEY_2) == glfw.PRESS:
+            delta += season_rate * delta_time
+
+        if delta != 0.0:
+            SEASON = SEASON + delta
+            if SEASON > 1.5:
+                SEASON -= 3.0
+            elif SEASON < -1.5:
+                SEASON += 3.0
+
+        if abs(SEASON - last_season) > 1e-4:
+            _apply_season_to_env(SEASON, terrain_shape, grass_mesh, foliage_meshes)
+            for mat in foliage_materials:
+                mat.season = SEASON
+            last_season = SEASON
+
         for s in sheeps:
             s.animate(delta_time)
+        Sheep.flush_instanced()
+        for w in wolves:
+            w.animate(delta_time)
+        Wolf.flush_instanced()
 
         glrenderer.render()
 

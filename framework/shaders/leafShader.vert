@@ -10,6 +10,7 @@ layout(location = 3) in vec2 aUV;      // from Shape.uvs      (vec2)
 // ---- per-instance matrix ----
 // Typical instancing: mat4 occupies 4 consecutive attribute locations.
 layout(location = 4) in mat4 instance_matrix;
+layout(location = 8) in vec4 instance_color;
 
 // ---- camera matrices ----
 uniform mat4 view;
@@ -27,6 +28,7 @@ out vec3 frag_normal;
 out vec4 frag_color;
 out vec4 frag_pos;
 out vec2 frag_uv;
+out float leaf_threshold;
 
 void main()
 {
@@ -62,6 +64,7 @@ void main()
 
     frag_color = aColor;
     frag_uv = aUV;
+    leaf_threshold = instance_color.a;
 
     gl_Position = projection * view * world;
 }
